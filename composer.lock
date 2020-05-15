@@ -1,0 +1,54 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "415051a17d7600d3212268f2c9d4890c",
+    "packages": [
+        {
+            "name": "itsjavi/fontawesome-iconpicker",
+            "version": "3.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/farbelous/fontawesome-iconpicker.git",
+                "reference": "ca4d2f2b03140af422ea9e15160494e887844d39"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/farbelous/fontawesome-iconpicker/zipball/ca4d2f2b03140af422ea9e15160494e887844d39",
+                "reference": "ca4d2f2b03140af422ea9e15160494e887844d39",
+                "shasum": ""
+            },
+            "type": "library",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Javi Aguilar",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Font Awesome Icon Picker plugin for Twitter Bootstrap",
+            "homepage": "https://farbelous.github.io/fontawesome-iconpicker/",
+            "keywords": [
+                "FontAwesome",
+                "bootstrap",
+                "iconpicker",
+                "picker",
+                "popover"
+            ],
+            "time": "2018-11-04T00:40:48+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

@@ -3,7 +3,7 @@
  * Plugin Name: Paid Memberships Pro - Chapters Add On
  * Plugin URI: https://geocosmic.org
  * Description: Add chapters for Paid Memberships Pro members or WP users.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Dmwds.com
  * Author URI: https://www.dmwds.com/
  * Text Domain: pmpro-chapters

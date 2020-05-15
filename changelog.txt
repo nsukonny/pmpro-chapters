@@ -1,3 +1,8 @@
+v1.0.1 -> May 12, 2020
+--------------------------
+* **[add]** Chapter list in frontend by shortcode
+* **[fix]** Small fixes
+
 v1.0.0 -> May 6, 2020
 --------------------------
 * **[add]** Initial release

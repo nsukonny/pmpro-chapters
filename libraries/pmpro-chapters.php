@@ -25,7 +25,7 @@ class PMPRO_Chapters {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private $version = '1.0.0';
+	private $version = '1.0.1';
 
 	/**
 	 * Instantiate the main class
@@ -90,12 +90,13 @@ class PMPRO_Chapters {
 	public function includes() {
 
 		if ( defined( 'PMPRO_CHAPTERS_LIBRARIES_PATH' ) ) {
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-supports.php';
 			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-types.php';
-			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-metaboxes.php';
+
 			if ( is_admin() ) {
 				require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-backend.php';
 			} else {
-				//require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-frontend.php';
+				require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-frontend.php';
 			}
 		}
 

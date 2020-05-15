@@ -18,6 +18,7 @@ class PMPRO_Chapters_Types {
 	public function init() {
 
 		add_action( 'init', array( $this, 'register_chapters_post_type' ), 10, 1 );
+		add_action( 'init', array( $this, 'register_chapter_region_post_type' ), 10, 1 );
 		add_filter( 'post_row_actions', array( $this, 'remove_row_actions' ), 10, 2 );
 
 		add_filter( 'manage_chapters_posts_columns', array( $this, 'add_columns' ) );
@@ -56,6 +57,7 @@ class PMPRO_Chapters_Types {
 			'menu_icon'             => 'dashicons-book',
 			'supports'              => array(
 				'title',
+				'editor',
 			),
 			'show_in_rest'          => true,
 			'rest_base'             => 'chapters',
@@ -66,10 +68,57 @@ class PMPRO_Chapters_Types {
 			'exclude_from_search'   => false,
 			'hierarchical'          => false,
 			'show_ui'               => true,
-			'show_in_menu'          => 'pmpro-dashboard',
 		);
 
 		register_post_type( 'chapters', $args );
+
+	}
+
+	/**
+	 * Register post type chapter region
+	 *
+	 * @since 1.0.0
+	 */
+	public function register_chapter_region_post_type() {
+
+		if ( ! is_blog_installed() || post_type_exists( 'chapter_regions' ) ) {
+			return;
+		}
+
+		$args = array(
+			'labels'                => array(
+				'name'               => 'Chapter Regions',
+				'singular_name'      => 'Chapter Region',
+				'add_new'            => 'Add New Chapter Region',
+				'add_new_item'       => 'Add New Chapter Region',
+				'edit_item'          => 'Edit Chapter Region',
+				'new_item'           => 'Add New Chapter Region',
+				'view_item'          => 'View Chapter Region',
+				'search_item'        => 'Search Chapter Regions',
+				'not_found'          => 'No Chapter Regions Found',
+				'not_found_in_trash' => 'No Chapter Regions Found in Trash'
+			),
+			'query_var'             => 'chapter_regions',
+			'rewrite'               => false,
+			'public'                => true,
+			'menu_position'         => 20,
+			'menu_icon'             => 'dashicons-book',
+			'supports'              => array(
+				'title',
+			),
+			'show_in_rest'          => true,
+			'rest_base'             => 'chapter_regions',
+			'rest_controller_class' => 'WP_REST_Posts_Controller',
+			'has_archive'           => true,
+			'taxonomies'            => array(),
+			'publicly_queryable'    => true,
+			'exclude_from_search'   => false,
+			'hierarchical'          => false,
+			'show_ui'               => true,
+			'show_in_menu'          => 'edit.php?post_type=chapters',
+		);
+
+		register_post_type( 'chapter_regions', $args );
 
 	}
 
@@ -86,7 +135,8 @@ class PMPRO_Chapters_Types {
 	public function remove_row_actions( $actions, $post ) {
 		global $current_screen;
 
-		if ( $current_screen->post_type != 'chapters' ) {
+		if ( $current_screen->post_type != 'chapters'
+		     && $current_screen->post_type != 'chapter_regions' ) {
 			return $actions;
 		}
 
@@ -135,10 +185,17 @@ class PMPRO_Chapters_Types {
 
 		switch ( $column ) {
 			case 'chapter_region' :
-				$regions = PMPRO_Chapters_Metaboxes::get_regions();
-				$region  = get_post_meta( $post_id, 'chapter_region', true );
+				$regions        = PMPRO_Chapters_Supports::get_regions();
+				$chapter_region = get_post_meta( $post_id, 'chapter_region', true );
 
-				echo isset( $regions[ $region ] ) ? $regions[ $region ] : '';
+				if ( $regions ) {
+					foreach ( $regions as $region ) {
+						if ( $region->ID == $chapter_region ) {
+							echo $region->post_title;
+							break;
+						}
+					}
+				}
 				break;
 			case 'chapter_country' :
 				$countries = upme_country_value_list();
@@ -147,7 +204,7 @@ class PMPRO_Chapters_Types {
 				echo isset( $countries[ $country ] ) ? $countries[ $country ] : '';
 				break;
 			case 'chapter_state' :
-				$states = PMPRO_Chapters_Metaboxes::get_states();
+				$states = PMPRO_Chapters_Supports::get_states();
 				$state  = get_post_meta( $post_id, 'chapter_state', true );
 
 				echo isset( $states[ $state ] ) ? $states[ $state ] : '';

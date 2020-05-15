@@ -1,0 +1,58 @@
+.pmpro-chapters-row {
+  margin-bottom: 1rem;
+}
+.pmpro-chapters-row__label {
+  margin-bottom: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  position: relative;
+  min-height: 1px;
+  padding: 6px 12px 6px 0;
+  display: inline-block;
+  width: 80px;
+}
+.pmpro-chapters-row__input {
+  display: inline-block;
+  min-width: 400px;
+  padding: 6px 12px !important;
+  line-height: 1.5;
+  color: #495057;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid #ced4da !important;
+  border-radius: 0.25rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  overflow: visible;
+}
+.pmpro-chapters-row__checkbox {
+  position: static;
+  margin-top: 0 !important;
+  margin-right: 0.3125rem;
+  margin-left: 0;
+  box-sizing: border-box;
+  padding: 0;
+  width: 20px !important;
+  height: 20px !important;
+}
+.pmpro-chapters-row__checkbox:checked::before {
+  margin: -5px 0 0 -7px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+.pmpro-chapters-row__delete {
+  color: grey;
+  font-size: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  opacity: 0.2;
+  transition: opacity 0.3s ease-in;
+  -moz-transition: opacity 0.3s ease-in;
+  -ms-transition: opacity 0.3s ease-in;
+  -o-transition: opacity 0.3s ease-in;
+  -webkit-transition: opacity 0.3s ease-in;
+}
+.pmpro-chapters-row__delete:hover {
+  opacity: 1;
+  color: red;
+}
+/*# sourceMappingURL=backend-style.css.map */

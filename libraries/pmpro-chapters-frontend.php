@@ -3,7 +3,7 @@
  * Class PMPRO_Chapters_Frontend
  * Init all methods for work chapters
  *
- * @since 1.0.0
+ * @since 1.0.1
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -13,32 +13,44 @@ class PMPRO_Chapters_Frontend {
 	/**
 	 * PMPRO_Chapters_Frontend initialization class.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.1
 	 */
 	public function init() {
 
-		add_action( 'gform_after_submission', array( $this, 'catch_chapter_members' ), 10, 3 );
+		add_action( 'wp_enqueue_scripts', array( $this, 'add_scripts' ), 10 );
+		$this->includes();
 
 	}
 
 	/**
-	 * Get data from gravity form and check to chapter users
+	 * Add scripts and styles for frontend
 	 *
-	 * @since 1.0.0
-	 *
-	 * @param $lead
-	 * @param $form
+	 * @since 1.0.1
 	 */
-	public function catch_chapter_members( $lead, $form ) {
+	public function add_scripts() {
 
-		/*
-		echo '<pre>';
-		print_r( $lead );
+		wp_enqueue_style( 'pmpro-chapters-styles', PMPRO_CHAPTERS_PLUGIN_URL . '/assets/style.css' );
 
-		print_r( $form );
-		echo '</pre>';
-		wp_die();
-		*/
+		wp_enqueue_script( 'pmpro-chapters-scripts', PMPRO_CHAPTERS_PLUGIN_URL . '/assets/scripts.js', array(
+			'jquery',
+		), time(), true );
+
+		wp_enqueue_script( 'pmpro-chapters-fontawesome', 'https://kit.fontawesome.com/2dee5ce468.js', array(
+			'jquery',
+		), false, true );
+
+	}
+
+	/**
+	 * Includes all necessary PHP files
+	 *
+	 * @since 1.0.1
+	 */
+	private function includes() {
+
+		if ( defined( 'PMPRO_CHAPTERS_LIBRARIES_PATH' ) ) {
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/frontend/chapters-list.php';
+		}
 
 	}
 
