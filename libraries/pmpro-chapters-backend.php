@@ -70,9 +70,9 @@ class PMPRO_Chapters_Backend {
         <table class="form-table">
             <tbody>
             <tr>
-                <th><label for="chapter_region">Chapter Region</label></th>
+                <th><label for="chapter_id">Chapter</label></th>
                 <td>
-                    <select name="chapter_region" id="chapter_region"
+                    <select name="chapter_id" id="chapter_id"
                             class="js_field-country select2-hidden-accessible"
                             style="width: 25em;" tabindex="-1" aria-hidden="true">
                         <option value="0">- - -</option>
@@ -107,8 +107,8 @@ class PMPRO_Chapters_Backend {
 	 */
 	public function save_chapter_fields( $user_id ) {
 
-		if ( current_user_can( 'edit_user', $user_id ) && ! empty( $_POST['chapter_user_id'] ) ) {
-			update_user_meta( $user_id, 'chapter_region', esc_attr( sanitize_text_field( $_POST['chapter_region'] ) ) );
+		if ( current_user_can( 'edit_user', $user_id ) && ! empty( $_POST['chapter_id'] ) ) {
+			update_user_meta( $user_id, 'chapter_id', esc_attr( sanitize_text_field( $_POST['chapter_id'] ) ) );
 		}
 
 	}
@@ -165,19 +165,19 @@ class PMPRO_Chapters_Backend {
 	 */
 	private function get_chapter_id( $user_id ) {
 
-		$chapter_region = get_user_meta( $user_id, 'chapter_region', true );
+		$chapter_id = get_user_meta( $user_id, 'chapter_id', true );
 
-		if ( ! is_numeric( $chapter_region ) && ! empty( $chapter_region ) ) {
+		if ( ! is_numeric( $chapter_id ) && ! empty( $chapter_id ) ) {
 			$chapters = PMPRO_Chapters_Supports::get_chapters();
 			foreach ( $chapters as $chapter ) {
-				if ( strtolower( $chapter_region ) == strtolower( $chapter->post_title ) ) {
+				if ( strtolower( $chapter_id ) == strtolower( $chapter->post_title ) ) {
 
 					return $chapter->ID;
 				}
 			}
 		}
 
-		return $chapter_region;
+		return $chapter_id;
 	}
 
 	/**

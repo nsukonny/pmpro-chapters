@@ -37,14 +37,14 @@ class PMPRO_Chapters_Backend_Filters {
 		);
 		$chapters = get_posts( $args );
 
-		$filtered_chapter = $this->get_filtered_chapter();
+		$filter_chapter_id = $this->get_filter_chapter_id();
 		if ( 0 < count( $chapters ) ) { ?>
-            <select name="filter_chapter_<?php esc_attr_e( $which ); ?>" id="filter_chapter"
+            <select name="filter_chapter_id_<?php esc_attr_e( $which ); ?>" id="filter_chapter_id"
                     style="float:none;margin-left:10px;">
                 <option value=""><?php _e( 'Chapter' ); ?></option>
 				<?php foreach ( $chapters as $chapter ) { ?>
-                    <option value="<?php esc_attr_e( $chapter->post_title ); ?>"
-						<?php selected( $chapter->post_title, $filtered_chapter, true ); ?>>
+                    <option value="<?php esc_attr_e( $chapter->ID ); ?>"
+						<?php selected( $chapter->ID, $filter_chapter_id, true ); ?>>
 						<?php esc_attr_e( $chapter->post_title ); ?>
                     </option>
 				<?php } ?>
@@ -66,14 +66,14 @@ class PMPRO_Chapters_Backend_Filters {
 		global $pagenow;
 
 		if ( is_admin() && 'users.php' == $pagenow ) {
-			$filtered_chapter = $this->get_filtered_chapter();
+			$filter_chapter_id = $this->get_filter_chapter_id();
 
-			if ( null !== $filtered_chapter ) {
+			if ( null !== $filter_chapter_id ) {
 
 				$meta_query = array(
 					array(
-						'key'     => 'chapter_region',
-						'value'   => $filtered_chapter,
+						'key'     => 'chapter_id',
+						'value'   => $filter_chapter_id,
 						'compare' => '=',
 					)
 				);
@@ -88,21 +88,22 @@ class PMPRO_Chapters_Backend_Filters {
 	 * Get filtered chapter if exist
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.1 Renamed from get_filtered_chapter to get_filter_chapter_id
 	 *
 	 * @return string|null
 	 */
-	private function get_filtered_chapter() {
+	private function get_filter_chapter_id() {
 
-		$has_top    = isset( $_GET['filter_chapter_top'] ) && 0 < strlen( trim( $_GET['filter_chapter_top'] ) );
-		$has_bottom = isset( $_GET['filter_chapter_bottom'] ) && 0 < strlen( trim( $_GET['filter_chapter_bottom'] ) );
+		$has_top    = isset( $_GET['filter_chapter_id_top'] ) && 0 < strlen( trim( $_GET['filter_chapter_id_top'] ) );
+		$has_bottom = isset( $_GET['filter_chapter_id_bottom'] ) && 0 < strlen( trim( $_GET['filter_chapter_id_bottom'] ) );
 
-		$filtered_chapter = $has_top ? sanitize_text_field( $_GET['filter_chapter_top'] ) : null;
-		if ( null === $filtered_chapter ) {
-			$filtered_chapter = null == $filtered_chapter && $has_bottom
-				? sanitize_text_field( $_GET['filter_chapter_bottom'] ) : null;
+		$filter_chapter_id = $has_top ? sanitize_text_field( $_GET['filter_chapter_id_top'] ) : null;
+		if ( null === $filter_chapter_id ) {
+			$filter_chapter_id = null == $filter_chapter_id && $has_bottom
+				? sanitize_text_field( $_GET['filter_chapter_id_bottom'] ) : null;
 		}
 
-		return $filtered_chapter;
+		return $filter_chapter_id;
 	}
 
 }

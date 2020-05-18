@@ -37,7 +37,7 @@ class PMPRO_Chapters_Frontend_Chapters_List {
 		} elseif ( isset( $atts['sig'] ) && $atts['sig'] ) {
 			$tabs = $this->by_sig();
 		} else {
-			$tabs = $this->by_regions();
+			$tabs = $this->by_countries();
 		}
 
 		$output = $this->render_tabs( $tabs );
@@ -46,35 +46,34 @@ class PMPRO_Chapters_Frontend_Chapters_List {
 	}
 
 	/**
-	 * Show chapters list by regions
+	 * Show chapters list by countries for international
 	 *
 	 * @since 1.0.1
 	 *
 	 * @return array
 	 */
-	private function by_regions() {
+	private function by_countries() {
 
-		$regions  = PMPRO_Chapters_Supports::get_regions();
-		$chapters = PMPRO_Chapters_Supports::get_chapters();
-		$tabs     = array();
+		$countries = PMPRO_Chapters_Supports::get_countries();
+		$chapters  = PMPRO_Chapters_Supports::get_chapters();
+		$tabs      = array();
 
-		if ( $regions && $chapters ) {
-			foreach ( $regions as $region ) {
-				if ( strtolower( $region->post_title ) == 'Special Interest Groups'
-				     || 4812 == $region->ID ) {
+		if ( $countries && $chapters ) {
+			foreach ( $countries as $country_code => $country ) {
+				if (empty($country_code)) {
 					continue;
 				}
 
 				$tab = array(
-					'tab_code' => $region->ID,
-					'tab_name' => $region->post_title,
+					'tab_code' => $country_code,
+					'tab_name' => $country,
 					'chapters' => array(),
 				);
 
 				foreach ( $chapters as $chapter ) {
 
-					$chapter_region = get_post_meta( $chapter->ID, 'chapter_region', true );
-					if ( $chapter_region == $region->ID ) {
+					$chapter_country = get_post_meta( $chapter->ID, 'chapter_country', true );
+					if ( $chapter_country == $country_code ) {
 						$tab['chapters'][] = $chapter;
 					}
 
@@ -110,8 +109,8 @@ class PMPRO_Chapters_Frontend_Chapters_List {
 				}
 
 				$tab = array(
-					'tab_code' => $region->ID,
-					'tab_name' => $region->post_title,
+					'tab_code' => 'all_countries',
+					'tab_name' => __( 'All', 'pmpro-chapters' ),
 					'chapters' => array(),
 				);
 

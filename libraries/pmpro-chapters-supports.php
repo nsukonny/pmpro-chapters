@@ -78,7 +78,7 @@ class PMPRO_Chapters_Supports {
 			$countries = upme_country_value_list();
 		}
 
-		return array_merge( array( 'All' ), $countries );
+		return array_merge( array( __( 'All', 'pmpro-chapters' ) ), $countries );
 	}
 
 }

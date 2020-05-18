@@ -162,6 +162,7 @@ class PMPRO_Chapters_Types {
 		unset( $columns['date'] );
 
 		$columns['chapter_id']      = __( 'Chapter ID' );
+		$columns['chapter_users']   = __( 'Users' );
 		$columns['chapter_region']  = __( 'Region' );
 		$columns['chapter_country'] = __( 'Country' );
 		$columns['chapter_state']   = __( 'State' );
@@ -213,6 +214,23 @@ class PMPRO_Chapters_Types {
 				$closed = get_post_meta( $post_id, 'chapter_closed', true );
 
 				echo 'yes' == $closed ? 'Yes' : 'No';
+				break;
+			case 'chapter_users' :
+				$args = array(
+					'meta_query'  => array(
+						array(
+							'key'     => 'chapter_id',
+							'value'   => $post_id,
+							'compare' => '=',
+						)
+					),
+					'count_total' => true
+				);
+
+				$users = new WP_User_Query( $args );
+
+				$link = admin_url( 'users.php?filter_chapter_id_top=' . $post_id, 'https' );
+				echo '<a href="' . esc_url( $link ) . '" >' . $users->get_total() . '</a>';
 				break;
 			case 'chapter_id' :
 				echo $post_id;
