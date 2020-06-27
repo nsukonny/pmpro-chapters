@@ -33,7 +33,9 @@ class PMPRO_Chapters_Backend_Filters {
 
 		$args     = array(
 			'post_type'   => 'chapters',
-			'numberposts' => - 1
+			'numberposts' => - 1,
+			'orderby'=> 'title',
+			'order' => 'ASC',
 		);
 		$chapters = get_posts( $args );
 
@@ -43,6 +45,12 @@ class PMPRO_Chapters_Backend_Filters {
                     style="float:none;margin-left:10px;">
                 <option value=""><?php _e( 'Chapter' ); ?></option>
 				<?php foreach ( $chapters as $chapter ) { ?>
+					<?php
+					$closed = get_post_meta( $chapter->ID, 'chapter_closed', true );
+					if ( 'yes' == $closed ) {
+					    continue;
+					}
+					?>
                     <option value="<?php esc_attr_e( $chapter->ID ); ?>"
 						<?php selected( $chapter->ID, $filter_chapter_id, true ); ?>>
 						<?php esc_attr_e( $chapter->post_title ); ?>

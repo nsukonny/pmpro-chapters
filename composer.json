@@ -1,5 +1,6 @@
 {
   "require": {
-    "itsjavi/fontawesome-iconpicker": "3.2.*"
+    "itsjavi/fontawesome-iconpicker": "3.2.*",
+    "phpoffice/phpspreadsheet": "^1.13"
   }
 }

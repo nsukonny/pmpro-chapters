@@ -20,6 +20,9 @@ class PMPRO_Chapters_Metaboxes {
 		add_action( 'add_meta_boxes', array( $this, 'add_metaboxes' ) );
 		add_action( 'save_post', array( $this, 'save_metaboxes' ) );
 
+		add_action( 'wp_ajax_chapters_get_states', array( $this, 'ajax_get_states' ), 99 );
+		add_action( 'wp_ajax_nopriv_chapters_get_states', array( $this, 'ajax_get_states' ), 99 );
+
 	}
 
 	/**
@@ -46,12 +49,13 @@ class PMPRO_Chapters_Metaboxes {
 	 */
 	public function chapter_coutry_metabox( $post, $meta ) {
 
-		$this->input_president( $post );
+		$this->select_president( $post );
 		$this->select_region( $post );
 		$this->select_country( $post );
 		$this->select_state( $post );
 		$this->closed( $post );
 		$this->social_links( $post );
+		$this->input_old_name( $post );
 
 	}
 
@@ -96,14 +100,32 @@ class PMPRO_Chapters_Metaboxes {
 	 *
 	 * @since 1.0.1
 	 */
-	private function input_president( $post ) {
+	private function select_president( $post ) {
 
+		$chapter_president_id = get_post_meta( $post->ID, 'chapter_president_id', true );
 		?>
+
         <div class="pmpro-chapters-row">
             <label for="chapter_president" class="pmpro-chapters-row__label">President:</label>
-            <input name="chapter_president" id="chapter_president" class="pmpro-chapters-row__input"
-                   value="<?php esc_attr_e( get_post_meta( $post->ID, 'chapter_president', true ) ); ?>">
+            <select name="chapter_president_id" id="chapter_president_id"
+                    class="js_field-country select2-hidden-accessible pmpro-chapters-row__input"
+                    style="width: 25em;" tabindex="-1" aria-hidden="true">
+                <option value="0">None</option>
+				<?php
+				$users = get_users();
+				foreach ( $users as $user ) {
+					?>
+                    <option value="<?php esc_attr_e( $user->ID ); ?>"
+						<?php selected( $chapter_president_id, $user->ID, true ); ?> >
+						<?php esc_attr_e( $user->last_name ); ?> <?php esc_attr_e( $user->first_name ); ?>
+                        (#<?php esc_attr_e( $user->ID ); ?>)
+                    </option>
+					<?php
+				}
+				?>
+            </select>
         </div>
+
 		<?php
 
 	}
@@ -123,7 +145,7 @@ class PMPRO_Chapters_Metaboxes {
                     tabindex="-1"
                     aria-hidden="true">
 				<?php
-                $countries = PMPRO_Chapters_Supports::get_countries();
+				$countries    = PMPRO_Chapters_Supports::get_countries();
 				$country_code = get_post_meta( $post->ID, 'chapter_country', true );
 				if ( $countries ) {
 					foreach ( $countries as $code => $country ) {
@@ -157,8 +179,9 @@ class PMPRO_Chapters_Metaboxes {
                     aria-hidden="true">
                 <option value="0"></option>
 				<?php
-				$states     = PMPRO_Chapters_Supports::get_states();
-				$state_code = get_post_meta( $post->ID, 'chapter_state', true );
+				$country_code = get_post_meta( $post->ID, 'chapter_country', true );
+				$state_code   = get_post_meta( $post->ID, 'chapter_state', true );
+				$states       = PMPRO_Chapters_Supports::get_states( $country_code );
 				if ( $states ) {
 					foreach ( $states as $code => $state ) {
 						?>
@@ -244,6 +267,23 @@ class PMPRO_Chapters_Metaboxes {
 
 	}
 
+	/**
+	 * Set old name
+	 *
+	 * @since 1.0.1
+	 */
+	private function input_old_name( $post ) {
+
+		?>
+        <div class="pmpro-chapters-row">
+            <label for="pmpro_chapters_old_name" class="pmpro-chapters-row__label">Old name:</label>
+            <input name="pmpro_chapters_old_name" id="pmpro_chapters_old_name" class="pmpro-chapters-row__input"
+                   value="<?php esc_attr_e( get_post_meta( $post->ID, 'pmpro_chapters_old_name', true ) ); ?>">
+        </div>
+		<?php
+
+	}
+
 
 	/**
 	 * Save all metaboxes data
@@ -259,8 +299,8 @@ class PMPRO_Chapters_Metaboxes {
 			return;
 		}
 
-		if ( isset( $_POST['chapter_president'] ) ) {
-			update_post_meta( $post_id, 'chapter_president', sanitize_text_field( $_POST['chapter_president'] ) );
+		if ( isset( $_POST['chapter_president_id'] ) ) {
+			update_post_meta( $post_id, 'chapter_president_id', sanitize_text_field( $_POST['chapter_president_id'] ) );
 		}
 
 		if ( isset( $_POST['chapter_region'] ) ) {
@@ -292,6 +332,34 @@ class PMPRO_Chapters_Metaboxes {
 		} else {
 			delete_post_meta( $post_id, 'chapter_social' );
 		}
+
+		if ( isset( $_POST['pmpro_chapters_old_name'] ) ) {
+			update_post_meta( $post_id, 'pmpro_chapters_old_name', sanitize_text_field( $_POST['pmpro_chapters_old_name'] ) );
+		}
+
+	}
+
+	/**
+	 * Get states by selected country in Ajax
+	 *
+	 * @since 1.0.1
+	 */
+	public function ajax_get_states() {
+
+		ob_clean();
+
+		$output_states = '';
+
+		$country_code = isset( $_POST['country_code'] ) ? sanitize_text_field( $_POST['country_code'] ) : 'US';
+		$states       = PMPRO_Chapters_Supports::get_states( $country_code );
+		if ( $states ) {
+			foreach ( $states as $code => $state ) {
+				$output_states .= '<option value="' . esc_attr( $code ) . '">' . esc_attr( $state ) . '</option>';
+			}
+		}
+
+		wp_send_json_success( array( 'output_states' => $output_states ) );
+		wp_die();
 
 	}
 

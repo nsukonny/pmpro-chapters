@@ -15,14 +15,20 @@ class PMPRO_Chapters_Supports {
 	 *
 	 * @since 1.0.1
 	 *
+	 * @param string $country_code
+	 *
 	 * @return mixed
 	 */
-	public static function get_states() {
+	public static function get_states( $country_code = 'US' ) {
+
+		if (0 === strlen($country_code)) {
+			$country_code = 'US';
+		}
 
 		$countries_obj = new WC_Countries();
 		$states        = $countries_obj->__get( 'states' );
 
-		return $states['US'];
+		return isset( $states[ $country_code ] ) ? $states[ $country_code ] : array();
 	}
 
 	/**
@@ -55,6 +61,8 @@ class PMPRO_Chapters_Supports {
 			'post_type'   => 'chapters',
 			'numberposts' => - 1,
 			'post_status' => array( 'publish', 'private' ),
+			'orderby'=> 'title',
+			'order' => 'ASC',
 		) );
 
 		return $chapters;

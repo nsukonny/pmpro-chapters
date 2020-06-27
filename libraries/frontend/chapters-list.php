@@ -60,7 +60,7 @@ class PMPRO_Chapters_Frontend_Chapters_List {
 
 		if ( $countries && $chapters ) {
 			foreach ( $countries as $country_code => $country ) {
-				if (empty($country_code)) {
+				if ( empty( $country_code ) || 'US' == $country_code ) {
 					continue;
 				}
 
@@ -73,7 +73,8 @@ class PMPRO_Chapters_Frontend_Chapters_List {
 				foreach ( $chapters as $chapter ) {
 
 					$chapter_country = get_post_meta( $chapter->ID, 'chapter_country', true );
-					if ( $chapter_country == $country_code ) {
+					$closed          = get_post_meta( $chapter->ID, 'chapter_closed', true );
+					if ( $chapter_country == $country_code && 'yes' != $closed ) {
 						$tab['chapters'][] = $chapter;
 					}
 
@@ -117,7 +118,8 @@ class PMPRO_Chapters_Frontend_Chapters_List {
 				foreach ( $chapters as $chapter ) {
 
 					$chapter_region = get_post_meta( $chapter->ID, 'chapter_region', true );
-					if ( $chapter_region == $region->ID ) {
+					$closed         = get_post_meta( $chapter->ID, 'chapter_closed', true );
+					if ( $chapter_region == $region->ID && 'yes' != $closed ) {
 						$tab['chapters'][] = $chapter;
 					}
 
@@ -156,7 +158,8 @@ class PMPRO_Chapters_Frontend_Chapters_List {
 				foreach ( $chapters as $chapter ) {
 
 					$chapter_state_code = get_post_meta( $chapter->ID, 'chapter_state', true );
-					if ( $chapter_state_code == $code ) {
+					$closed             = get_post_meta( $chapter->ID, 'chapter_closed', true );
+					if ( $chapter_state_code == $code && 'yes' != $closed ) {
 						$tab['chapters'][] = $chapter;
 					}
 

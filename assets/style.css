@@ -195,4 +195,7 @@
 .pmpro-chapters-list .list-wrapper-content .chapter-tab-panes .chapter-pane-elem__social-link:focus {
   background-color: #85a1c1;
 }
+.pmpro-renew-button {
+  display: none;
+}
 /*# sourceMappingURL=style.css.map */

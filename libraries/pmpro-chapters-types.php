@@ -24,6 +24,12 @@ class PMPRO_Chapters_Types {
 		add_filter( 'manage_chapters_posts_columns', array( $this, 'add_columns' ) );
 		add_action( 'manage_chapters_posts_custom_column', array( $this, 'add_columns_values' ), 10, 2 );
 
+		add_filter( 'manage_chapter_regions_posts_columns', array( $this, 'add_chapter_regions_columns' ) );
+		add_action( 'manage_chapter_regions_posts_custom_column', array(
+			$this,
+			'add_chapter_regions_columns_values'
+		), 10, 2 );
+
 	}
 
 	/**
@@ -230,10 +236,54 @@ class PMPRO_Chapters_Types {
 				$users = new WP_User_Query( $args );
 
 				$link = admin_url( 'users.php?filter_chapter_id_top=' . $post_id, 'https' );
-				echo '<a href="' . esc_url( $link ) . '" >' . $users->get_total() . '</a>';
+				echo '<a href="' . esc_url( $link ) . '" >' . esc_attr( $users->get_total() ) . '</a>';
 				break;
 			case 'chapter_id' :
-				echo $post_id;
+				$link = admin_url( 'admin.php?page=chapter_detail&chapter_id=' . $post_id, 'https' );
+				echo '<a href="' . esc_url( $link ) . '" >' . esc_attr( $post_id ) . '</a>';
+				break;
+			default:
+		}
+
+	}
+
+	/**
+	 * Add columns in chapters regions table
+	 *
+	 * @since 1.0.1
+	 *
+	 * @param $columns
+	 *
+	 * @return mixed
+	 */
+	public function add_chapter_regions_columns( $columns ) {
+
+		unset( $columns['title'] );
+		unset( $columns['date'] );
+
+		$columns['chapter_region_id'] = __( 'Chapter region ID' );
+		$columns['title']             = __( 'Chapter Name' );
+		$columns['date']              = __( 'Date' );
+
+		return $columns;
+	}
+
+	/**
+	 * Add value for new columns
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param $column
+	 * @param $post_id
+	 *
+	 * @return mixed
+	 */
+	public function add_chapter_regions_columns_values( $column, $post_id ) {
+
+		switch ( $column ) {
+			case 'chapter_region_id' :
+				$link = admin_url( 'post-new.php?post_type=chapter_regions', 'https' );
+				echo '<a href="' . esc_url( $link ) . '" >' . esc_attr( $post_id ) . '</a>';
 				break;
 			default:
 		}

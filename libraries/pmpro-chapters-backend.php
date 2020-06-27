@@ -54,6 +54,14 @@ class PMPRO_Chapters_Backend {
 				'jquery',
 			), time(), true );
 
+		wp_localize_script(
+			'pmpro-chapters-scripts',
+			'ajax_chapters',
+			array(
+				'ajax_url' => admin_url( 'admin-ajax.php' ),
+			)
+		);
+
 	}
 
 	/**
@@ -190,8 +198,11 @@ class PMPRO_Chapters_Backend {
 	private function includes() {
 
 		if ( defined( 'PMPRO_CHAPTERS_LIBRARIES_PATH' ) ) {
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-users-table.php';
 			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/backend/metaboxes.php';
 			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/backend/filters.php';
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/backend/detail-page.php';
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/backend/total-import.php';
 		}
 
 	}
@@ -227,6 +238,22 @@ class PMPRO_Chapters_Backend {
 					'jquery',
 					'pmpro-chapters-bootstrap-js',
 				), false, true );
+
+			wp_enqueue_style( 'select2-styles',
+				WC()->plugin_url() . '/assets/css/select2.css' );
+
+			wp_register_script( 'select2', WC()->plugin_url() . '/assets/js/select2/select2.full.min.js', array( 'jquery' ) );
+			wp_enqueue_script( 'select2' );
+
+			wp_register_script( 'selectWoo', WC()->plugin_url() . '/assets/js/selectWoo/selectWoo.full.min.js', array( 'jquery' ) );
+			wp_enqueue_script( 'selectWoo' );
+
+			wp_register_script( 'wc-enhanced-select', WC()->plugin_url() . '/assets/js/admin/wc-enhanced-select.min.js', array(
+				'jquery',
+				'selectWoo'
+			) );
+			wp_enqueue_script( 'wc-enhanced-select' );
+
 		}
 
 	}
@@ -235,8 +262,8 @@ class PMPRO_Chapters_Backend {
 
 function pmpro_chapters_backend_runner() {
 
-	$frontend = new PMPRO_Chapters_Backend;
-	$frontend->init();
+	$backend = new PMPRO_Chapters_Backend;
+	$backend->init();
 
 	return true;
 }

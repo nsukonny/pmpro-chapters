@@ -23,4 +23,15 @@ jQuery(document).ready(function ($) {
         return false;
     });
 
+    if (ajax_chapters.hide_renewal_button) {
+        $('#pmpro_renewal_button').remove();
+        if ($('.pmpro-renew-button').length) {
+            $('.pmpro-renew-button').closest('.wpb_row').remove();
+        }
+    }
+
+    if (ajax_chapters.hide_become_button) {
+        $('#pmpro_become_member_button').remove();
+    }
+
 });

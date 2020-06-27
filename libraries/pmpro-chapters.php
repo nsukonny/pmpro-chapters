@@ -92,6 +92,7 @@ class PMPRO_Chapters {
 		if ( defined( 'PMPRO_CHAPTERS_LIBRARIES_PATH' ) ) {
 			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-supports.php';
 			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-types.php';
+			require PMPRO_CHAPTERS_PLUGIN_PATH . 'vendor/autoload.php';
 
 			if ( is_admin() ) {
 				require PMPRO_CHAPTERS_LIBRARIES_PATH . '/pmpro-chapters-backend.php';

@@ -1,7 +1,8 @@
 jQuery(document).ready(function ($) {
 
     let pickers = $('.icp-dd'),
-        rowNumber = pickers.length;
+        rowNumber = pickers.length,
+        body = $('body');
 
     if (pickers.length) {
         pickers.iconpicker();
@@ -16,7 +17,7 @@ jQuery(document).ready(function ($) {
         });
     }
 
-    $('body').on('click', '.pmpro-chapters-row__add', function () {
+    body.on('click', '.pmpro-chapters-row__add', function () {
 
         let newRow = add_social_row(++rowNumber);
 
@@ -38,11 +39,48 @@ jQuery(document).ready(function ($) {
         return false;
     });
 
-    $('body').on('click', '.pmpro-chapters-row__delete', function () {
+    body.on('click', '.pmpro-chapters-row__delete', function () {
 
         $(this).closest('.pmpro-chapters-row').remove();
 
         return false;
+    });
+
+    body.on('change', '#chapter_country', function () {
+        let state_select = $('#chapter_state'),
+            data = {
+                country_code: $(this).val(),
+                action: 'chapters_get_states',
+            };
+
+        $.post(ajax_chapters.ajax_url, data, function (resp) {
+            if (resp.success) {
+                if (0 === resp.data.output_states.length) {
+                    state_select.closest('.pmpro-chapters-row').fadeOut();
+                } else {
+                    state_select.closest('.pmpro-chapters-row').fadeIn();
+                }
+                $('#chapter_state').html(resp.data.output_states);
+            }
+        });
+    });
+
+    body.on('click', '#pmpro-chapters-import', function () {
+        let form = $('#pmpro-cahpters-import-form'),
+            fileUploader = form.find('input[type="file"]');
+        fileUploader.trigger('click');
+        fileUploader.change(function () {
+            form.submit();
+        });
+    });
+
+    body.on('click', '#pmpro-chapters-total-import', function () {
+        let form = $('#pmpro-cahpters-total-import-form'),
+            fileUploader = form.find('input[type="file"]');
+        fileUploader.trigger('click');
+        fileUploader.change(function () {
+            form.submit();
+        });
     });
 
     function add_social_row(rowNumber) {
@@ -69,5 +107,27 @@ jQuery(document).ready(function ($) {
 
         return output;
     }
+
+    function prepareDropdowns() {
+
+        if ($('#chapter_president_id').length) {
+            $('#chapter_president_id').selectWoo();
+        }
+
+        if ($('#chapter_region').length) {
+            $('#chapter_region').selectWoo();
+        }
+
+        if ($('#chapter_country').length) {
+            $('#chapter_country').selectWoo();
+        }
+
+        if ($('#chapter_state').length) {
+            $('#chapter_state').selectWoo();
+        }
+
+    }
+
+    prepareDropdowns();
 
 });
