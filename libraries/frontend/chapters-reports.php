@@ -83,6 +83,9 @@ class PMPRO_Chapters_Reports {
                 </p>
                 <p>
                     <select name="chapter_id" id="chapter_id">
+                        <option value="0">
+							<?php _e( 'All chapters', 'pmpro-chapters' ); ?>
+                        </option>
 						<?php foreach ( $chapters as $chapter ) { ?>
 							<?php
 							$closed = get_post_meta( $chapter->ID, 'chapter_closed', true );
@@ -168,25 +171,64 @@ class PMPRO_Chapters_Reports {
 		$chapter_id        = isset( $_GET['chapter_id'] ) ? (int) $_GET['chapter_id'] : 0;
 		$chapter_president = get_post_meta( $chapter_id, 'chapter_president_id', true );
 
-		if ( 0 === $chapter_id ||
-		     ( ! in_array( 'administrator', $user->roles ) && $chapter_president !== $user->ID ) ) {
+		if ( ! in_array( 'administrator', $user->roles ) && $chapter_president != $user->ID ) {
 			return;
 		}
 
 		$spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-		$sheet       = $spreadsheet->getActiveSheet();
-		$chapter     = get_post( $chapter_id );
-		$row         = 1;
-		$this->set_chapter_name( $sheet, $chapter, $row );
-		$this->set_titles( $sheet, $row );
-		$this->set_users( $sheet, $chapter_id, $row );
-		$this->set_autosize( $sheet );
 
-		$writer = new PhpOffice\PhpSpreadsheet\Writer\Xlsx( $spreadsheet );
-		$writer->save( PMPRO_CHAPTERS_PLUGIN_PATH . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
+		if ( 0 === $chapter_id && in_array( 'administrator', $user->roles ) ) {
+			$chapters = get_posts( array(
+				'post_type'   => 'chapters',
+				'numberposts' => - 1,
+				'orderby'     => 'title',
+				'order'       => 'ASC',
+			) );
 
-		wp_safe_redirect( PMPRO_CHAPTERS_PLUGIN_URL . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
-		exit;
+			foreach ( $chapters as $chapter ) {
+				$chapter_sheet = new \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet(
+					$spreadsheet,
+					substr( esc_attr( $chapter->post_title ), 0, 20 )
+				);
+				$sheet         = $spreadsheet->addSheet( $chapter_sheet );
+				$row           = 1;
+
+				$this->set_chapter_name( $sheet, $chapter, $row );
+				$this->set_titles( $sheet, $row );
+				$this->set_users( $sheet, $chapter->ID, $row );
+				$this->set_autosize( $sheet );
+
+				$sheet->freezePane('A5');
+			}
+
+			$sheetIndex = $spreadsheet->getIndex(
+				$spreadsheet->getSheetByName( 'Worksheet' )
+			);
+			$spreadsheet->removeSheetByIndex( $sheetIndex );
+
+			$writer = new PhpOffice\PhpSpreadsheet\Writer\Xlsx( $spreadsheet );
+			$writer->save( PMPRO_CHAPTERS_PLUGIN_PATH . 'temp/chapters_for_' . $user->ID . '.xlsx' );
+
+			wp_safe_redirect( PMPRO_CHAPTERS_PLUGIN_URL . 'temp/chapters_for_' . $user->ID . '.xlsx' );
+			exit;
+
+		} else {
+			$sheet = $spreadsheet->getActiveSheet();
+
+			$chapter = get_post( $chapter_id );
+			$row     = 1;
+
+			$this->set_chapter_name( $sheet, $chapter, $row );
+			$this->set_titles( $sheet, $row );
+			$this->set_users( $sheet, $chapter_id, $row );
+			$this->set_autosize( $sheet );
+
+			$writer = new PhpOffice\PhpSpreadsheet\Writer\Xlsx( $spreadsheet );
+			$writer->save( PMPRO_CHAPTERS_PLUGIN_PATH . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
+
+			wp_safe_redirect( PMPRO_CHAPTERS_PLUGIN_URL . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
+			exit;
+		}
 
 	}
 
@@ -291,7 +333,7 @@ class PMPRO_Chapters_Reports {
 	 */
 	private function get_end_date( $membership_level ) {
 
-		$end_date = empty( $membership_level->enddate ) ? __( 'never', 'pmpro-chapters' )
+		$end_date = empty( $membership_level->enddate ) ? __( '01/01/2100', 'pmpro-chapters' )
 			: date_i18n( 'm/d/y', $membership_level->enddate );
 
 		return $end_date;
@@ -379,12 +421,13 @@ class PMPRO_Chapters_Reports {
 	 */
 	private function set_autosize( &$sheet ) {
 
+		//Autosize all columns
 		$sheet->getColumnDimension( 'A' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'B' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'C' )->setAutoSize( true );
-		$sheet->getColumnDimension( 'D' )->setAutoSize( true );
-		$sheet->getColumnDimension( 'E' )->setAutoSize( true );
-		$sheet->getColumnDimension( 'F' )->setAutoSize( true );
+		//$sheet->getColumnDimension( 'D' )->setAutoSize( true );
+		//$sheet->getColumnDimension( 'E' )->setAutoSize( true );
+		//$sheet->getColumnDimension( 'F' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'G' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'H' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'I' )->setAutoSize( true );
@@ -397,6 +440,11 @@ class PMPRO_Chapters_Reports {
 		$sheet->getColumnDimension( 'P' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'Q' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'R' )->setAutoSize( true );
+
+		//Wrap text
+		$sheet->getStyle( 'D1:D' . $sheet->getHighestRow() )->getAlignment()->setWrapText( true );
+		$sheet->getStyle( 'E1:E' . $sheet->getHighestRow() )->getAlignment()->setWrapText( true );
+		$sheet->getStyle( 'F1:F' . $sheet->getHighestRow() )->getAlignment()->setWrapText( true );
 
 	}
 
@@ -459,23 +507,36 @@ class PMPRO_Chapters_Reports {
 	 */
 	private function set_users( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet &$sheet, $chapter_id, &$row ) {
 
-		$args        = array(
+		//TODO Write empty meta fields for show all posts.
+
+		$query_args = array(
 			'meta_key'   => 'chapter_id',
 			'meta_value' => sanitize_text_field( $chapter_id ),
-			'meta_query' => array(
-				//'relation'       => 'AND',
-				'orderby_status' => array(
-					'key'     => 'member_status',
-					'compare' => 'NOT EXIST',
-				),
+		);
+
+		$query_args['meta_query'] = array(
+			'relation'          => 'AND',
+			'status_clause'     => array(
+				'key'     => 'member_status',
+				'compare' => 'EXISTS',
 			),
-			'orderby'    => array(
-				'orderby_status' => 'ASC',
-				'last_name'      => 'ASC',
-				'first_name'     => 'ASC',
+			'last_name_clause'  => array(
+				'key'     => 'last_name',
+				'compare' => 'EXISTS',
+			),
+			'first_name_clause' => array(
+				'key'     => 'first_name',
+				'compare' => 'EXISTS',
 			),
 		);
-		$users_query = new WP_User_Query( $args );
+
+		$query_args['orderby'] = array(
+			'last_name_clause'  => 'ASC',
+			'first_name_clause' => 'ASC',
+			'status_clause'     => 'ASC',
+		);
+
+		$users_query = new WP_User_Query( $query_args );
 		$live_users  = 0;
 		$row ++;
 		if ( 0 < $users_query->get_total() ) {
@@ -490,7 +551,7 @@ class PMPRO_Chapters_Reports {
 					$membership_levels = pmpro_getMembershipLevelsForUser( $user->ID, true );
 
 					if ( 0 < count( $membership_levels ) ) {
-						$membership_level = $membership_levels[0];
+						$membership_level = $membership_levels[ count( $membership_levels ) - 1 ];
 
 						if ( isset( $membership_level->startdate ) && ! empty( $membership_level->startdate ) ) {
 							$sheet->setCellValue( 'D' . $row, date_i18n( 'm/d/y', $membership_level->startdate ) );
@@ -524,7 +585,7 @@ class PMPRO_Chapters_Reports {
 
 		} else {
 
-			$sheet->setCellValue( 'A' . $row, __( 'Chapter don`t have users', 'pmpro-chapters' ) . ' = ' . $live_users );
+			$sheet->setCellValue( 'A' . $row, __( 'Chapter don`t have users', 'pmpro-chapters' ) );
 			$sheet->mergeCells( 'A' . $row . ':E' . $row );
 
 		}

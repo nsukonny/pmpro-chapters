@@ -14,6 +14,9 @@ defined( 'ABSPATH' ) || exit;
 
 if ( ! class_exists( 'PMPRO_Chapters' ) ) {
 
+	require_once('wp-updates-plugin.php');
+	new WPUpdatesPluginUpdater_2177( 'http://wp-updates.com/api/2/plugin', plugin_basename(__FILE__));
+
 	include_once dirname( __FILE__ ) . '/libraries/pmpro-chapters.php';
 
 }

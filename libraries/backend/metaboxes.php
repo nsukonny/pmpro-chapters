@@ -103,6 +103,7 @@ class PMPRO_Chapters_Metaboxes {
 	private function select_president( $post ) {
 
 		$chapter_president_id = get_post_meta( $post->ID, 'chapter_president_id', true );
+		$chapter_president    = get_post_meta( $post->ID, 'chapter_president', true );
 		?>
 
         <div class="pmpro-chapters-row">
@@ -124,6 +125,8 @@ class PMPRO_Chapters_Metaboxes {
 				}
 				?>
             </select>
+            <input type="text" value="<?php esc_attr_e( $chapter_president ); ?>" name="chapter_president"
+                   class="pmpro-chapters-row__input" style="width: 25em;">
         </div>
 
 		<?php
@@ -301,6 +304,10 @@ class PMPRO_Chapters_Metaboxes {
 
 		if ( isset( $_POST['chapter_president_id'] ) ) {
 			update_post_meta( $post_id, 'chapter_president_id', sanitize_text_field( $_POST['chapter_president_id'] ) );
+		}
+
+		if ( isset( $_POST['chapter_president'] ) ) {
+			update_post_meta( $post_id, 'chapter_president', sanitize_text_field( $_POST['chapter_president'] ) );
 		}
 
 		if ( isset( $_POST['chapter_region'] ) ) {
