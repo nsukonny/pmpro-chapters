@@ -78,7 +78,7 @@ class PMPRO_Chapters_Backend {
         <table class="form-table">
             <tbody>
             <tr>
-                <th><label for="chapter_id">Chapter</label></th>
+                <th><label for="chapter_id">Chapter (сonsists of)</label></th>
                 <td>
                     <select name="chapter_id" id="chapter_id"
                             class="js_field-country select2-hidden-accessible"

@@ -87,8 +87,8 @@ class PMPRO_Chapters_Frontend {
 			if ( empty( $membership_level->enddate ) && empty( $membership_level->cycle_period ) ) {
 				$expiration_date = '+ 1 year';
 			} else {
-				$expiration_month = date_i18n( "m", $membership_level->enddate );
-				$expiration_day   = date_i18n( "j", $membership_level->enddate );
+				$expiration_month = date_i18n( "M", $membership_level->enddate );
+				$expiration_day   = date_i18n( "d", $membership_level->enddate );
 				$expiration_year  = date_i18n( "Y", $membership_level->enddate );
 				$expiration_date  = date( 'd M Y', strtotime( $expiration_day . '-' . $expiration_month . '-' . $expiration_year ) );
 			}

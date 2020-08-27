@@ -83,9 +83,6 @@ class PMPRO_Chapters_Reports {
                 </p>
                 <p>
                     <select name="chapter_id" id="chapter_id">
-                        <option value="0">
-							<?php _e( 'All chapters', 'pmpro-chapters' ); ?>
-                        </option>
 						<?php foreach ( $chapters as $chapter ) { ?>
 							<?php
 							$closed = get_post_meta( $chapter->ID, 'chapter_closed', true );
@@ -136,7 +133,8 @@ class PMPRO_Chapters_Reports {
                     <p>
                         <a href="<?php echo esc_url( $export_link ); ?>">
                             <strong>
-								<?php _e( 'Click here to download your chapter report as an excel file.', 'pmpro-chapters' ); ?>
+								<?php _e( 'Click here to download your chapter report as an excel file.',
+									'pmpro-chapters' ); ?>
                             </strong>
                         </a>
                     </p>
@@ -171,64 +169,28 @@ class PMPRO_Chapters_Reports {
 		$chapter_id        = isset( $_GET['chapter_id'] ) ? (int) $_GET['chapter_id'] : 0;
 		$chapter_president = get_post_meta( $chapter_id, 'chapter_president_id', true );
 
-		if ( ! in_array( 'administrator', $user->roles ) && $chapter_president != $user->ID ) {
+		if ( 0 === $chapter_id ||
+		     ( ! in_array( 'administrator', $user->roles ) && $chapter_president != $user->ID ) ) {
 			return;
 		}
 
 		$spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+		$sheet       = $spreadsheet->getActiveSheet();
+		$chapter     = get_post( $chapter_id );
 
-		if ( 0 === $chapter_id && in_array( 'administrator', $user->roles ) ) {
-			$chapters = get_posts( array(
-				'post_type'   => 'chapters',
-				'numberposts' => - 1,
-				'orderby'     => 'title',
-				'order'       => 'ASC',
-			) );
+		$row = 1;
+		$this->set_chapter_name( $sheet, $chapter, $row );
 
-			foreach ( $chapters as $chapter ) {
-				$chapter_sheet = new \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet(
-					$spreadsheet,
-					substr( esc_attr( $chapter->post_title ), 0, 20 )
-				);
-				$sheet         = $spreadsheet->addSheet( $chapter_sheet );
-				$row           = 1;
+		$this->set_titles( $sheet, $row );
+		$this->set_users( $sheet, $chapter_id, $row );
+		$this->set_autosize( $sheet );
+		//$sheet->freezePane( 'A1' );
 
-				$this->set_chapter_name( $sheet, $chapter, $row );
-				$this->set_titles( $sheet, $row );
-				$this->set_users( $sheet, $chapter->ID, $row );
-				$this->set_autosize( $sheet );
+		$writer = new PhpOffice\PhpSpreadsheet\Writer\Xlsx( $spreadsheet );
+		$writer->save( PMPRO_CHAPTERS_PLUGIN_PATH . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
 
-				$sheet->freezePane('A5');
-			}
-
-			$sheetIndex = $spreadsheet->getIndex(
-				$spreadsheet->getSheetByName( 'Worksheet' )
-			);
-			$spreadsheet->removeSheetByIndex( $sheetIndex );
-
-			$writer = new PhpOffice\PhpSpreadsheet\Writer\Xlsx( $spreadsheet );
-			$writer->save( PMPRO_CHAPTERS_PLUGIN_PATH . 'temp/chapters_for_' . $user->ID . '.xlsx' );
-
-			wp_safe_redirect( PMPRO_CHAPTERS_PLUGIN_URL . 'temp/chapters_for_' . $user->ID . '.xlsx' );
-			exit;
-
-		} else {
-			$sheet = $spreadsheet->getActiveSheet();
-
-			$chapter = get_post( $chapter_id );
-			$row     = 1;
-
-			$this->set_chapter_name( $sheet, $chapter, $row );
-			$this->set_titles( $sheet, $row );
-			$this->set_users( $sheet, $chapter_id, $row );
-			$this->set_autosize( $sheet );
-
-			$writer = new PhpOffice\PhpSpreadsheet\Writer\Xlsx( $spreadsheet );
-			$writer->save( PMPRO_CHAPTERS_PLUGIN_PATH . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
-
-			wp_safe_redirect( PMPRO_CHAPTERS_PLUGIN_URL . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
-			exit;
-		}
+		wp_safe_redirect( PMPRO_CHAPTERS_PLUGIN_URL . 'temp/chapter_' . $chapter->post_name . '_' . $user->ID . '.xlsx' );
+		exit;
 
 	}
 
@@ -271,7 +233,8 @@ class PMPRO_Chapters_Reports {
 		global $wpdb;
 
 		if ( ! $this->membership_levels ) {
-			$this->membership_levels = $wpdb->get_results( "SELECT * FROM {$wpdb->pmpro_membership_levels}", OBJECT );
+			$this->membership_levels = $wpdb->get_results( "SELECT * FROM {$wpdb->pmpro_membership_levels}",
+				OBJECT );
 		}
 
 		return $this->membership_levels;
@@ -279,24 +242,141 @@ class PMPRO_Chapters_Reports {
 
 	/**
 	 * Get activity type for membership plan
-	 *
+	 * TODO Remove after accepting get_activity_type
 	 * @since 1.0.0
 	 *
-	 * @param $membership_levels
+	 * @param $user_id
+	 *
+	 * @param $end_date
 	 *
 	 * @return string
 	 */
-	private function get_activity_type( $membership_levels ) {
+	private function get_activity_type_bk( $user_id, $end_date ) {
+		global $wpdb;
 
-		if ( 1 < count( $membership_levels ) ) {
-			$activity_type = 'Renewal';
+		$activity_type = '';
+
+		if ( strtotime( '30.06.2020' ) <= strtotime( $end_date ) ) {
+			$pmpro_orders_table       = $wpdb->prefix . 'pmpro_membership_orders';
+			$legacy_orders_table      = $wpdb->prefix . 'leg_activity_history';
+			$legacy_orders_type_table = $wpdb->prefix . 'leg_activity_types';
+
+			$member_legacy_id = get_user_meta( $user_id, 'member_legacy_ID', true );
+			if ( empty( $member_legacy_id ) ) {
+				$orders = $wpdb->get_results( "SELECT * FROM " . $legacy_orders_table .
+				                              " WHERE activity_member_ID=" . $member_legacy_id .
+				                              " ORDER BY activity_date DESC LIMIT 5" );
+				if ( count( $orders ) ) {
+					for ( $order_key = 0; $order_key < 5; $order_key ++ ) {
+						$order_type = $wpdb->get_row( "SELECT * FROM " . $legacy_orders_type_table .
+						                              " WHERE activity_type_ID=" . $orders[ $order_key ]->activity_type_ID );
+						if ( $order_type ) {
+							$activity_type = sanitize_text_field( $order_type->activity_type_description );
+
+							if ( strpos( 'donation', $activity_type ) === false ) {
+								break;
+							}
+						}
+					}
+				}
+			} else {
+				$orders = $wpdb->get_results( "SELECT * FROM " . $pmpro_orders_table . " WHERE user_id=" . $user_id );
+				if ( count( $orders ) ) {
+					$the_level     = pmpro_getLevel( $orders[0]->membership_id );
+					$activity_type = $the_level->name;
+				}
+			}
 		} else {
-			$activity_type = 'Join';
+			$membership_levels = pmpro_getMembershipLevelsForUser( $user_id, true );
+
+			if ( isset( $membership_levels[ count( $membership_levels ) - 1 ]->name ) ) {
+				$name = explode( 'US - ', $membership_levels[ count( $membership_levels ) - 1 ]->name );
+				if ( ! isset( $name[1] ) ) {
+					$name = explode( ' - ', $membership_levels[ count( $membership_levels ) - 1 ]->name );
+				}
+				$activity_type = 'US' . ( ( 1 < count( $membership_levels ) ) ? ' - Renewal - ' : ' - Join - ' ) . $name[1];
+			}
 		}
 
-		$activity_type .= ' ' . $membership_levels[0]->name;
-
 		return $activity_type;
+	}
+
+	/**
+	 * Get data from last order for that user
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param $user_id
+	 *
+	 * @return array
+	 */
+	private function get_last_order_info( $user_id ) {
+		global $wpdb;
+
+		$order         = array(
+			'description' => '',
+			'start_date'  => '',
+			'end_date'    => '',
+			'amount'      => '',
+		);
+		$min_date      = strtotime( '2/2/20' );
+		$pmpro_orders  = $this->get_pmpro_orders( $user_id );
+		$legacy_orders = $this->get_legacy_orders( $user_id );
+
+		if ( count( $pmpro_orders ) ) {
+
+			foreach ( $pmpro_orders as $pmpro_order ) {
+				if ( strtotime( $pmpro_order->timestamp ) >= $min_date ) {
+					$order['description'] = $pmpro_order->name;
+					$order['start_date']  = $pmpro_order->timestamp;
+					$order['amount']      = $pmpro_order->billing_amount;
+				}
+
+				break;
+			}
+
+		}
+
+		if ( count( $legacy_orders )
+		     && ( empty( $order['start_date'] )
+		          || ( strtotime( $order['start_date'] ) < $min_date ) ) ) {
+
+			$legacy_orders_type_table = $wpdb->prefix . 'leg_activity_types';
+			foreach ( $legacy_orders as $legacy_order ) {
+				$legacy_order_type = $wpdb->get_row( "SELECT * FROM " . $legacy_orders_type_table .
+				                                     " WHERE activity_type_ID=" . $legacy_order->activity_type_ID );
+				if ( false !== strpos( strtolower( $legacy_order_type->activity_type_description ), 'renew' )
+				     || false !== strpos( strtolower( $legacy_order_type->activity_type_description ), 'join' ) ) {
+
+					$order['description'] = $legacy_order_type->activity_type_description;
+					$order['start_date']  = $legacy_order->activity_date;
+					$order['amount']      = $legacy_order->activity_amount;
+					break;
+				}
+			}
+		}
+
+		if ( 0 === count( $pmpro_orders ) && 0 === count( $legacy_orders ) ) {
+			$membership_levels = pmpro_getMembershipLevelsForUser( $user_id, true );
+			if ( count( $membership_levels ) ) {
+				$start_date           = ! empty( $membership_levels[ count( $membership_levels ) - 1 ]->startdate ) ?
+					date( 'm/d/y', $membership_levels[ count( $membership_levels ) - 1 ]->startdate ) : '';
+				$order['description'] = $membership_levels[ count( $membership_levels ) - 1 ]->name;
+				$order['start_date']  = $start_date;
+				$order['end_date']    = $membership_levels[ count( $membership_levels ) - 1 ]->enddate;
+				$order['amount']      = $membership_levels[ count( $membership_levels ) - 1 ]->billing_amount;
+			}
+		}
+
+		$order['description'] = $this->check_description( $order['description'], $pmpro_orders, $legacy_orders );
+		if ( '0000-00-00 00:00:00' == $order['start_date'] || strtotime( '01.01.1976' ) > strtotime( $order['start_date'] ) ) {
+			$order['start_date'] = '';
+		}
+		if ( '0000-00-00 00:00:00' == $order['end_date'] || strtotime( '01.01.1976' ) > strtotime( $order['end_date'] ) ) {
+			$order['end_date'] = '';
+		}
+
+		return $order;
 	}
 
 	/**
@@ -313,10 +393,15 @@ class PMPRO_Chapters_Reports {
 		$member_legacy_ID = get_user_meta( $user_id, 'member_legacy_ID', true );
 		if ( ! empty( $member_legacy_ID ) && is_numeric( $member_legacy_ID ) && 0 < $member_legacy_ID ) {
 			$member_since_date = get_user_meta( $user_id, 'member_member_since_date', true );
-			$since_date        = date_i18n( 'm/d/y', strtotime( $member_since_date ) );
+			$member_since_date = $this->remove_wrong_since_dates( $member_since_date, $user_id );
+			if ( ! empty( $member_since_date ) ) {
+				$since_date = date_i18n( 'm/d/y', strtotime( $member_since_date ) );
+			}
 		} else {
-			$user_data  = get_userdata( $user_id );
-			$since_date = date_i18n( 'm/d/y', strtotime( $user_data->user_registered ) );
+			$user_data = get_userdata( $user_id );
+			if ( isset( $user_data->user_registered ) ) {
+				$since_date = date_i18n( 'm/d/y', strtotime( $user_data->user_registered ) );
+			}
 		}
 
 		return isset( $since_date ) ? $since_date : '';
@@ -329,12 +414,32 @@ class PMPRO_Chapters_Reports {
 	 *
 	 * @param $membership_level
 	 *
+	 * @param $user_id
+	 *
 	 * @return string
 	 */
-	private function get_end_date( $membership_level ) {
+	private function get_end_date( $membership_level, $user_id ) {
 
-		$end_date = empty( $membership_level->enddate ) ? __( '01/01/2100', 'pmpro-chapters' )
-			: date_i18n( 'm/d/y', $membership_level->enddate );
+		$is_lifetime_member = isset( $membership_level->ID ) && empty( $membership_level->enddate );
+		$is_member          = isset( $membership_level->ID ) && ! empty( $membership_level->enddate );
+		$end_date           = '';
+
+		if ( $is_lifetime_member ) {
+			$end_date = __( '01/01/2100', 'pmpro-chapters' );
+		} else if ( $is_member ) {
+			$end_date = date_i18n( 'm/d/y', $membership_level->enddate );
+		}
+
+		if ( strtotime( '30.06.2020' ) > strtotime( $end_date ) || empty( $end_date ) ) {
+			$member_expiration_date = get_user_meta( $user_id, 'member_expiration_date', true );
+			if ( ! empty( $member_expiration_date ) && strtotime( $member_expiration_date ) > strtotime( '01.01.1980' ) ) {
+				$end_date = date_i18n( 'm/d/y', strtotime( $member_expiration_date ) );
+			}
+		}
+
+		if ( strtotime( $end_date ) < strtotime( '01.01.1976' ) ) {
+			$end_date = '';
+		}
 
 		return $end_date;
 	}
@@ -376,7 +481,9 @@ class PMPRO_Chapters_Reports {
 				}
 
 				if ( function_exists( 'pmpro_getLevel' ) ) {
-					$this->pmpro_orders[ $pmpro_order->user_id ][] = pmpro_getLevel( $pmpro_order->membership_id );
+					$level                                         = (array) pmpro_getLevel( $pmpro_order->membership_id );
+					$level['timestamp']                            = $pmpro_order->timestamp;
+					$this->pmpro_orders[ $pmpro_order->user_id ][] = (object) $level;
 				}
 
 			}
@@ -390,26 +497,29 @@ class PMPRO_Chapters_Reports {
 	 *
 	 * @since 1.0.0
 	 *
+	 * @param $user_id
+	 *
 	 * @return array
 	 */
-	private function get_legacy_orders( $member_legacy_id ) {
+	private function get_legacy_orders( $user_id ) {
 
-		if ( ! $this->legacy_orders ) {
+		$member_legacy_id = get_user_meta( $user_id, 'member_legacy_ID', true );
+		if ( ! $this->legacy_orders && $member_legacy_id ) {
 			global $wpdb;
 
-			$legacy_orders_table = 'wp87_leg_activity_history';
-			$legacy_orders       = $wpdb->get_results( "SELECT * FROM " . $legacy_orders_table . " ORDER BY activity_date DESC" );
+			$legacy_orders_table = $wpdb->prefix . 'leg_activity_history';
+			$legacy_orders       = $wpdb->get_results( "SELECT * FROM " . $legacy_orders_table .
+			                                           " ORDER BY activity_date DESC" );
 			foreach ( $legacy_orders as $legacy_order ) {
 				if ( ! isset( $this->legacy_orders[ $legacy_order->activity_member_ID ] ) ) {
 					$this->legacy_orders[ $legacy_order->activity_member_ID ] = array();
 				}
 
 				$this->legacy_orders[ $legacy_order->activity_member_ID ][] = $legacy_order;
-
 			}
 		}
 
-		return isset( $this->pmpro_orders[ $member_legacy_id ] ) ? $this->pmpro_orders[ $member_legacy_id ] : array();
+		return isset( $this->legacy_orders[ $member_legacy_id ] ) ? $this->legacy_orders[ $member_legacy_id ] : array();
 	}
 
 	/**
@@ -421,13 +531,12 @@ class PMPRO_Chapters_Reports {
 	 */
 	private function set_autosize( &$sheet ) {
 
-		//Autosize all columns
 		$sheet->getColumnDimension( 'A' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'B' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'C' )->setAutoSize( true );
-		//$sheet->getColumnDimension( 'D' )->setAutoSize( true );
-		//$sheet->getColumnDimension( 'E' )->setAutoSize( true );
-		//$sheet->getColumnDimension( 'F' )->setAutoSize( true );
+		$sheet->getColumnDimension( 'D' )->setAutoSize( true );
+		$sheet->getColumnDimension( 'E' )->setAutoSize( true );
+		$sheet->getColumnDimension( 'F' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'G' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'H' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'I' )->setAutoSize( true );
@@ -441,10 +550,21 @@ class PMPRO_Chapters_Reports {
 		$sheet->getColumnDimension( 'Q' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'R' )->setAutoSize( true );
 
-		//Wrap text
-		$sheet->getStyle( 'D1:D' . $sheet->getHighestRow() )->getAlignment()->setWrapText( true );
-		$sheet->getStyle( 'E1:E' . $sheet->getHighestRow() )->getAlignment()->setWrapText( true );
-		$sheet->getStyle( 'F1:F' . $sheet->getHighestRow() )->getAlignment()->setWrapText( true );
+		$sheet->getStyle( 'F2:F' . $sheet->getHighestRow() )
+		      ->getNumberFormat()
+		      ->setFormatCode(
+			      \PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_DATE_XLSX14
+		      );
+		$sheet->getStyle( 'H2:H' . $sheet->getHighestRow() )
+		      ->getNumberFormat()
+		      ->setFormatCode(
+			      \PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_DATE_XLSX14
+		      );
+		$sheet->getStyle( 'Q2:Q' . $sheet->getHighestRow() )
+		      ->getNumberFormat()
+		      ->setFormatCode(
+			      \PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_DATE_XLSX14
+		      );
 
 	}
 
@@ -461,7 +581,7 @@ class PMPRO_Chapters_Reports {
 
 		$member_status = get_user_meta( $user_id, 'member_status', true );
 
-		return ! empty( $member_status ) ? $member_status : '_blank';
+		return ! empty( $member_status ) ? $member_status : '';
 	}
 
 	/**
@@ -473,26 +593,33 @@ class PMPRO_Chapters_Reports {
 	 */
 	private function set_titles( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet &$sheet, &$row ) {
 
-		$row += 3;
-		$sheet->setCellValue( 'A' . $row, __( 'Last Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'B' . $row, __( 'First Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'C' . $row, __( 'Membership Level', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'D' . $row, __( 'Most Recent Membership Start Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'E' . $row, __( 'Most Recent Activity Type', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'F' . $row, __( 'Most Recent Amount Paid', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'G' . $row, __( 'Most Recent Expiration Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'H' . $row, __( 'Previous Expiration Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'I' . $row, __( 'Active Since Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'J' . $row, __( 'Address Line 1', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'K' . $row, __( 'City', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'L' . $row, __( 'State', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'M' . $row, __( 'Country	', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'N' . $row, __( 'Zip Code', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'O' . $row, __( 'Phone Number 1', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'P' . $row, __( 'Comnbined Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'Q' . $row, __( 'Email', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'R' . $row, __( 'Member Status', 'pmpro-chapters' ) );
-		$sheet->getStyle( 'A' . $row . ':R' . $row )->getFont()->setSize( 16 );
+		$row += 0;
+		$sheet->setCellValue( 'B' . $row, __( 'Last Name', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'C' . $row, __( 'First Name', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'D' . $row, __( 'Membership Level', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'E' . $row, __( 'Activity Type', 'pmpro-chapters' ) );
+
+		$sheet->setCellValue( 'F' . $row, __( "Current Start \nDate", 'pmpro-chapters' ) );
+		$sheet->getStyle( 'F' . $row )->getAlignment()->setWrapText( true );
+
+		$sheet->setCellValue( 'G' . $row, __( "Current \nAmount Paid ($)", 'pmpro-chapters' ) );
+		$sheet->getStyle( 'G' . $row )->getAlignment()->setWrapText( true );
+		$sheet->setCellValue( 'H' . $row, __( "Current \nExpiration Date", 'pmpro-chapters' ) );
+		$sheet->getStyle( 'H' . $row )->getAlignment()->setWrapText( true );
+		//$sheet->setCellValue( 'G' . $row, __( 'Previous Expiration Date', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'I' . $row, __( 'Address Line 1', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'J' . $row, __( 'City', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'K' . $row, __( 'State', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'L' . $row, __( 'Country	', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'M' . $row, __( 'Zip Code', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'N' . $row, __( 'Phone Number 1', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'O' . $row, __( 'Combined Name', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'P' . $row, __( 'Email', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'Q' . $row, __( "Active Since \nDate", 'pmpro-chapters' ) );
+		$sheet->getStyle( 'Q' . $row )->getAlignment()->setWrapText( true );
+
+		$sheet->setCellValue( 'R' . $row, __( 'Deceased Members', 'pmpro-chapters' ) );
+		$sheet->getStyle( 'A' . $row . ':R' . $row )->getFont()->setSize( 14 );
 
 	}
 
@@ -507,95 +634,204 @@ class PMPRO_Chapters_Reports {
 	 */
 	private function set_users( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet &$sheet, $chapter_id, &$row ) {
 
-		//TODO Write empty meta fields for show all posts.
-
-		$query_args = array(
-			'meta_key'   => 'chapter_id',
-			'meta_value' => sanitize_text_field( $chapter_id ),
-		);
-
-		$query_args['meta_query'] = array(
-			'relation'          => 'AND',
-			'status_clause'     => array(
-				'key'     => 'member_status',
-				'compare' => 'EXISTS',
+		$args        = array(
+			'orderby'    => array(
+				'member_status' => 'ASC',
+				'last_name'     => 'ASC',
 			),
-			'last_name_clause'  => array(
-				'key'     => 'last_name',
-				'compare' => 'EXISTS',
-			),
-			'first_name_clause' => array(
-				'key'     => 'first_name',
-				'compare' => 'EXISTS',
-			),
+			'meta_query' => array(
+				'relation'      => 'AND',
+				'last_name'     => array(
+					'key'     => 'last_name',
+					'compare' => 'EXISTS'
+				),
+				'chapter_id'    => array(
+					'key'   => 'chapter_id',
+					'value' => sanitize_text_field( $chapter_id )
+				),
+				'member_status' => array(
+					'key'     => 'member_status',
+					'compare' => 'EXISTS'
+				),
+			)
 		);
+		$users_query = new WP_User_Query( $args );
 
-		$query_args['orderby'] = array(
-			'last_name_clause'  => 'ASC',
-			'first_name_clause' => 'ASC',
-			'status_clause'     => 'ASC',
-		);
-
-		$users_query = new WP_User_Query( $query_args );
-		$live_users  = 0;
+		$live_users = 0;
 		$row ++;
 		if ( 0 < $users_query->get_total() ) {
-
+			$users_array = array();
 			foreach ( $users_query->get_results() as $user ) {
 
-				$sheet->setCellValue( 'A' . $row, $user->last_name );
-				$sheet->setCellValue( 'B' . $row, $user->first_name );
-				$sheet->setCellValue( 'C' . $row, $this->get_membership_level( $user->ID ) );
+				$user_info               = array();
+				$user_info['user_id']    = $user->ID;
+				$user_info['last_name']  = $user->last_name;
+				$user_info['first_name'] = $user->first_name;
 
-				if ( function_exists( 'pmpro_getMembershipLevelsForUser' ) ) {
-					$membership_levels = pmpro_getMembershipLevelsForUser( $user->ID, true );
+				$temp_membership = $this->get_membership_level( $user->ID );
+				if ( $temp_membership != 'None' ) {
+					$pos             = strpos( $temp_membership, 'Year Membership' );
+					$temp_membership = substr( $temp_membership, 0, $pos ) . 'Year Membership 1';
+				}
+				$user_info['membership'] = $temp_membership;
 
-					if ( 0 < count( $membership_levels ) ) {
-						$membership_level = $membership_levels[ count( $membership_levels ) - 1 ];
+				$last_order_info         = $this->get_last_order_info( $user->ID );
+				$user_info['activity']   = $last_order_info['description'];
+				$user_info['start_date'] = $last_order_info['start_date'];
 
-						if ( isset( $membership_level->startdate ) && ! empty( $membership_level->startdate ) ) {
-							$sheet->setCellValue( 'D' . $row, date_i18n( 'm/d/y', $membership_level->startdate ) );
-						}
 
-						$sheet->setCellValue( 'E' . $row, $this->get_activity_type( $membership_levels ) );
-						$sheet->setCellValue( 'F' . $row, '$' . $membership_level->billing_amount );
-						$sheet->setCellValue( 'G' . $row, $this->get_end_date( $membership_level ) );
-						$sheet->setCellValue( 'H' . $row, $this->get_previous_end_date( $membership_levels ) );
-						$sheet->setCellValue( 'I' . $row, $this->get_member_since_date( $user->ID ) );
-					}
+				if ( empty( $user_info['activity'] ) ) {
+					continue;
 				}
 
-				$sheet->setCellValue( 'J' . $row, get_user_meta( $user->ID, 'member_addr_street_1', true ) );
-				$sheet->setCellValue( 'K' . $row, get_user_meta( $user->ID, 'member_addr_city', true ) );
-				$sheet->setCellValue( 'L' . $row, get_user_meta( $user->ID, 'member_addr_state', true ) );
-				$sheet->setCellValue( 'M' . $row, get_user_meta( $user->ID, 'member_addr_country', true ) );
-				$sheet->setCellValue( 'N' . $row, get_user_meta( $user->ID, 'member_addr_zip', true ) );
-				$sheet->setCellValue( 'O' . $row, get_user_meta( $user->ID, 'member_phone_1', true ) );
-				$sheet->setCellValue( 'P' . $row, $user->first_name . ' ' . $user->last_name );
-				$sheet->setCellValue( 'Q' . $row, $user->user_email );
-				$status = $this->get_status( $user->ID );
-				$sheet->setCellValue( 'R' . $row, $status );
+				if ( function_exists( 'pmpro_getMembershipLevelForUser' ) ) {
+					$membership_level = pmpro_getMembershipLevelForUser( $user->ID );
+
+					if ( isset( $membership_level->name ) ) {
+						$user_info['membership'] = $membership_level->name;
+					}
+
+					$user_info['amount'] = 0 < $last_order_info['amount'] ? $last_order_info['amount']
+						: $this->get_billed_amount( $membership_level );
+
+					$user_info['end_date'] = ( ! empty( $last_order_info['end_date'] ) )
+						? date_i18n( 'm/d/y', strtotime( $last_order_info['end_date'] ) )
+						: $this->get_end_date( $membership_level, $user->ID );
+
+					if ( empty( $user_info['end_date'] ) ) {
+						$user_info['end_date_day'] = $user_info['end_date_year'] = '';
+					} else {
+						$days                       = explode( '/', $user_info['end_date'] );
+						$user_info['end_date_day']  = $days[0] . '/' . $days[1];
+						$user_info['end_date_year'] = $days[2];
+					}
+
+					$user_info['since'] = $this->get_member_since_date( $user->ID );
+
+				}
+				$user_info['street']   = get_user_meta( $user->ID, 'member_addr_street_1', true );
+				$user_info['city']     = get_user_meta( $user->ID, 'member_addr_city', true );
+				$user_info['state']    = get_user_meta( $user->ID, 'member_addr_state', true );
+				$user_info['country']  = get_user_meta( $user->ID, 'member_addr_country', true );
+				$user_info['zip']      = get_user_meta( $user->ID, 'member_addr_zip', true );
+				$user_info['phone']    = get_user_meta( $user->ID, 'member_addr_phone', true );
+				$user_info['all_name'] = $user->first_name . ' ' . $user->last_name;
+				$user_info['email']    = $user->user_email;
+
+				$status              = $this->get_status( $user->ID );
+				$user_info['status'] = $status;
 
 				if ( 'deceased' !== strtolower( $status ) ) {
 					$live_users ++;
 				}
+
+				if ( strtotime( $user_info['end_date'] ) < time() ) {
+					$user_info['membership'] = __( 'none', 'pmpro-chapters' );
+				}
+
+				array_push( $users_array, $user_info );
+			}
+
+			// sorting part
+			$users_array1 = $this->array_msort( $users_array, array(
+				'status'        => SORT_ASC,
+				'end_date_year' => SORT_DESC,
+				'end_date_day'  => SORT_DESC,
+				'last_name'     => SORT_ASC
+			) );
+			//
+			foreach ( $users_array1 as $user ) {
+				$sheet->setCellValue( 'B' . $row, $user['last_name'] );
+				$sheet->setCellValue( 'C' . $row, $user['first_name'] );
+				$sheet->setCellValue( 'D' . $row, $user['membership'] );
+
+				if ( ! empty( $user['start_date'] ) ) {
+					$start_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(
+						strtotime( $user['start_date'] ) );
+					$sheet->setCellValue( 'F' . $row, $start_date );
+				}
+
+				$sheet->setCellValue( 'G' . $row, $user['amount'] );
+
+				if ( ! empty( $user['end_date'] ) && 2 < mb_strlen( $user['end_date'] ) ) {
+					$end_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(
+						strtotime( $user['end_date'] ) );
+					$sheet->setCellValue( 'H' . $row, $end_date );
+				}
+
+				if ( ! empty( $user['since'] ) ) {
+					$since_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(
+						strtotime( $user['since'] ) );
+				}
+
+				$sheet->setCellValue( 'Q' . $row, $since_date );
+				$sheet->setCellValue( 'E' . $row, $user['activity'] );
+
+				$sheet->setCellValue( 'I' . $row, $user['street'] );
+				$sheet->setCellValue( 'J' . $row, $user['city'] );
+				$sheet->setCellValue( 'K' . $row, $user['state'] );
+				$sheet->setCellValue( 'L' . $row, $user['country'] );
+				$sheet->setCellValue( 'M' . $row, $user['zip'] );
+				$sheet->setCellValue( 'N' . $row, $user['phone'] );
+				$sheet->setCellValue( 'O' . $row, $user['all_name'] );
+				$sheet->setCellValue( 'P' . $row, $user['email'] );
+				$sheet->setCellValue( 'R' . $row, $user['status'] );
 
 				$row ++;
 			}
 
 		} else {
 
-			$sheet->setCellValue( 'A' . $row, __( 'Chapter don`t have users', 'pmpro-chapters' ) );
+			$sheet->setCellValue( 'A' . $row, __( 'Chapter don`t have users', 'pmpro-chapters' ) .
+			                                  ' = ' . $live_users );
 			$sheet->mergeCells( 'A' . $row . ':E' . $row );
 
 		}
 
-		$row += 3;
-		$sheet->setCellValue( 'A' . $row, __( 'TOTAL MEMBERS', 'pmpro-chapters' ) . ' = ' . $live_users );
-		$sheet->mergeCells( 'A' . $row . ':E' . $row );
-		$sheet->getStyle( 'A' . $row . ':E' . $row )->getFont()->setSize( 16 );
-
 	}
+
+	/**
+	 * Multisort results
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param $array
+	 * @param $cols
+	 *
+	 * @return array
+	 */
+	private function array_msort( $array, $cols ) {
+
+		$colarr = array();
+		foreach ( $cols as $col => $order ) {
+			$colarr[ $col ] = array();
+			foreach ( $array as $k => $row ) {
+				$colarr[ $col ][ '_' . $k ] = strtolower( $row[ $col ] );
+			}
+		}
+
+		$eval = 'array_multisort(';
+		foreach ( $cols as $col => $order ) {
+			$eval .= '$colarr[\'' . $col . '\'],' . $order . ',';
+		}
+
+		$eval = substr( $eval, 0, - 1 ) . ');';
+		eval( $eval );
+		$ret = array();
+
+		foreach ( $colarr as $col => $arr ) {
+			foreach ( $arr as $k => $v ) {
+				$k = substr( $k, 1 );
+				if ( ! isset( $ret[ $k ] ) ) {
+					$ret[ $k ] = $array[ $k ];
+				}
+				$ret[ $k ][ $col ] = $array[ $k ][ $col ];
+			}
+		}
+
+		return $ret;
+	}
+
 
 	/**
 	 * Set title for xls document
@@ -609,13 +845,101 @@ class PMPRO_Chapters_Reports {
 	 */
 	private function set_chapter_name( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet &$sheet, $chapter, &$row ) {
 
-		$title = __( 'NCGR CHAPTER REPORT for ', 'pmpro-chapters' ) . esc_attr( $chapter->post_title );
-		$title .= __( ' as of ', 'pmpro-chapters' ) . date_i18n( 'm/d/y H:i' );
+		$title = esc_attr( $chapter->post_title );
+		//$title = __( 'NCGR CHAPTER REPORT for ', 'pmpro-chapters' ) . esc_attr( $chapter->post_title );
+		//$title .= __( ' as of ', 'pmpro-chapters' ) . date_i18n( 'm/d/y H:i' );
 
 		$sheet->setCellValue( 'A' . $row, $title );
-		$sheet->mergeCells( 'A' . $row . ':E' . $row );
+		//$sheet->mergeCells( 'A' . $row . ':E' . $row );
 		$sheet->getStyle( 'A' . $row . ':E' . $row )->getFont()->setSize( 22 );
 
+	}
+
+	/**
+	 * Return total billed summ for that level
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param $membership_level
+	 *
+	 * @return string
+	 */
+	private function get_billed_amount( $membership_level ) {
+
+		if ( ! empty( $membership_level ) ) {
+			$membership_level->original_initial_payment = $membership_level->initial_payment;
+			$membership_level->initial_payment          = $membership_level->billing_amount;
+		}
+
+		if ( empty( $membership_level ) || pmpro_isLevelFree( $membership_level ) ) {
+			if ( ! empty( $membership_level->original_initial_payment ) && $membership_level->original_initial_payment > 0 ) {
+				$total = $membership_level->original_initial_payment;
+			} else {
+				$total = 0;
+			}
+		} else {
+			$total = $membership_level->initial_payment;
+		}
+
+		return $total;
+	}
+
+	/**
+	 * Remove wrong dates like 1970
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param $member_since_date
+	 * @param $user_id
+	 *
+	 * @return string
+	 */
+	private function remove_wrong_since_dates( $member_since_date, $user_id ) {
+
+		if ( strtotime( "1980" ) > strtotime( $member_since_date ) ) {
+			update_user_meta( $user_id, 'member_member_since_date', '' );
+
+			return '';
+		}
+
+		return $member_since_date;
+	}
+
+	/**
+	 * Add for this type word "Renewal" or "Join"
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param $activity_type
+	 *
+	 * @param $pmpro_orders
+	 * @param $legacy_orders
+	 *
+	 * @return string
+	 */
+	private function check_description( $activity_type, $pmpro_orders, $legacy_orders ) {
+
+		if ( ! empty( $activity_type )
+		     && false === strpos( strtolower( $activity_type ), 'renew' )
+		     && false === strpos( strtolower( $activity_type ), 'join' ) ) {
+			$is_renewal = 2 <= count( $pmpro_orders )
+			              || ( 1 === count( $pmpro_orders ) && 0 < count( $legacy_orders ) );
+			$order_type = $is_renewal ? ' - Renew ' : ' - Join ';
+
+			if ( false !== strpos( strtolower( $activity_type ), 'individual' ) ) {
+				$type_name = explode( '- Individual', $activity_type );
+				if ( 2 <= count( $type_name ) ) {
+					$activity_type = $type_name[0] . $order_type . '- Individual' . $type_name[1];
+				}
+			} elseif ( false !== strpos( strtolower( $activity_type ), 'couple' ) ) {
+				$type_name = explode( '- Couple', $activity_type );
+				if ( 2 <= count( $type_name ) ) {
+					$activity_type = $type_name[0] . $order_type . '- Couple' . $type_name[1];
+				}
+			}
+		}
+
+		return $activity_type;
 	}
 
 }
