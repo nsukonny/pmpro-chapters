@@ -552,19 +552,13 @@ class PMPRO_Chapters_Reports {
 
 		$sheet->getStyle( 'F2:F' . $sheet->getHighestRow() )
 		      ->getNumberFormat()
-		      ->setFormatCode(
-			      \PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_DATE_XLSX14
-		      );
+		      ->setFormatCode( 'mm/dd/yyyy' );
 		$sheet->getStyle( 'H2:H' . $sheet->getHighestRow() )
 		      ->getNumberFormat()
-		      ->setFormatCode(
-			      \PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_DATE_XLSX14
-		      );
+		      ->setFormatCode( 'mm/dd/yyyy' );
 		$sheet->getStyle( 'Q2:Q' . $sheet->getHighestRow() )
 		      ->getNumberFormat()
-		      ->setFormatCode(
-			      \PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_DATE_XLSX14
-		      );
+		      ->setFormatCode( 'mm/dd/yyyy' );
 
 	}
 

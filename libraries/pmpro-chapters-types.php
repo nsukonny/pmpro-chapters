@@ -57,7 +57,7 @@ class PMPRO_Chapters_Types {
 				'not_found_in_trash' => 'No Chapters Found in Trash'
 			),
 			'query_var'             => 'chapters',
-			'rewrite'               => false,
+			'rewrite'               => array( 'slug' => 'chapters' ),
 			'public'                => false,
 			'menu_position'         => 20,
 			'menu_icon'             => 'dashicons-book',
