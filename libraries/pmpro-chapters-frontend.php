@@ -64,6 +64,10 @@ class PMPRO_Chapters_Frontend {
 		if ( defined( 'PMPRO_CHAPTERS_LIBRARIES_PATH' ) ) {
 			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/frontend/chapters-list.php';
 			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/frontend/chapters-reports.php';
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/frontend/rebate-reports/rebate-report.php';
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/frontend/rebate-reports/summary-page.php';
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/frontend/rebate-reports/all-members.php';
+			require PMPRO_CHAPTERS_LIBRARIES_PATH . '/frontend/rebate-reports.php';
 		}
 
 	}

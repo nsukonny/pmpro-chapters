@@ -1,3 +1,7 @@
+v1.0.3 -> Sep 25, 2020
+--------------------------
+* **[add]** Rebate reports
+
 v1.0.2 -> Jun 30, 2020
 --------------------------
 * **[add]** Chapter president text field for chapter reports

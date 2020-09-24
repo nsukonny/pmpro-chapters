@@ -241,67 +241,6 @@ class PMPRO_Chapters_Reports {
 	}
 
 	/**
-	 * Get activity type for membership plan
-	 * TODO Remove after accepting get_activity_type
-	 * @since 1.0.0
-	 *
-	 * @param $user_id
-	 *
-	 * @param $end_date
-	 *
-	 * @return string
-	 */
-	private function get_activity_type_bk( $user_id, $end_date ) {
-		global $wpdb;
-
-		$activity_type = '';
-
-		if ( strtotime( '30.06.2020' ) <= strtotime( $end_date ) ) {
-			$pmpro_orders_table       = $wpdb->prefix . 'pmpro_membership_orders';
-			$legacy_orders_table      = $wpdb->prefix . 'leg_activity_history';
-			$legacy_orders_type_table = $wpdb->prefix . 'leg_activity_types';
-
-			$member_legacy_id = get_user_meta( $user_id, 'member_legacy_ID', true );
-			if ( empty( $member_legacy_id ) ) {
-				$orders = $wpdb->get_results( "SELECT * FROM " . $legacy_orders_table .
-				                              " WHERE activity_member_ID=" . $member_legacy_id .
-				                              " ORDER BY activity_date DESC LIMIT 5" );
-				if ( count( $orders ) ) {
-					for ( $order_key = 0; $order_key < 5; $order_key ++ ) {
-						$order_type = $wpdb->get_row( "SELECT * FROM " . $legacy_orders_type_table .
-						                              " WHERE activity_type_ID=" . $orders[ $order_key ]->activity_type_ID );
-						if ( $order_type ) {
-							$activity_type = sanitize_text_field( $order_type->activity_type_description );
-
-							if ( strpos( 'donation', $activity_type ) === false ) {
-								break;
-							}
-						}
-					}
-				}
-			} else {
-				$orders = $wpdb->get_results( "SELECT * FROM " . $pmpro_orders_table . " WHERE user_id=" . $user_id );
-				if ( count( $orders ) ) {
-					$the_level     = pmpro_getLevel( $orders[0]->membership_id );
-					$activity_type = $the_level->name;
-				}
-			}
-		} else {
-			$membership_levels = pmpro_getMembershipLevelsForUser( $user_id, true );
-
-			if ( isset( $membership_levels[ count( $membership_levels ) - 1 ]->name ) ) {
-				$name = explode( 'US - ', $membership_levels[ count( $membership_levels ) - 1 ]->name );
-				if ( ! isset( $name[1] ) ) {
-					$name = explode( ' - ', $membership_levels[ count( $membership_levels ) - 1 ]->name );
-				}
-				$activity_type = 'US' . ( ( 1 < count( $membership_levels ) ) ? ' - Renewal - ' : ' - Join - ' ) . $name[1];
-			}
-		}
-
-		return $activity_type;
-	}
-
-	/**
 	 * Get data from last order for that user
 	 *
 	 * @since 1.0.0
@@ -310,7 +249,7 @@ class PMPRO_Chapters_Reports {
 	 *
 	 * @return array
 	 */
-	private function get_last_order_info( $user_id ) {
+	public function get_last_order_info( $user_id ) {
 		global $wpdb;
 
 		$order         = array(
@@ -368,7 +307,7 @@ class PMPRO_Chapters_Reports {
 			}
 		}
 
-		$order['description'] = $this->check_description( $order['description'], $pmpro_orders, $legacy_orders );
+		$order['description'] = self::check_description( $order['description'], $pmpro_orders, $legacy_orders );
 		if ( '0000-00-00 00:00:00' == $order['start_date'] || strtotime( '01.01.1976' ) > strtotime( $order['start_date'] ) ) {
 			$order['start_date'] = '';
 		}
@@ -388,12 +327,12 @@ class PMPRO_Chapters_Reports {
 	 *
 	 * @return false|string
 	 */
-	private function get_member_since_date( $user_id ) {
+	public static function get_member_since_date( $user_id ) {
 
 		$member_legacy_ID = get_user_meta( $user_id, 'member_legacy_ID', true );
 		if ( ! empty( $member_legacy_ID ) && is_numeric( $member_legacy_ID ) && 0 < $member_legacy_ID ) {
 			$member_since_date = get_user_meta( $user_id, 'member_member_since_date', true );
-			$member_since_date = $this->remove_wrong_since_dates( $member_since_date, $user_id );
+			$member_since_date = self::remove_wrong_since_dates( $member_since_date, $user_id );
 			if ( ! empty( $member_since_date ) ) {
 				$since_date = date_i18n( 'm/d/y', strtotime( $member_since_date ) );
 			}
@@ -418,7 +357,7 @@ class PMPRO_Chapters_Reports {
 	 *
 	 * @return string
 	 */
-	private function get_end_date( $membership_level, $user_id ) {
+	public static function get_end_date( $membership_level, $user_id ) {
 
 		$is_lifetime_member = isset( $membership_level->ID ) && empty( $membership_level->enddate );
 		$is_member          = isset( $membership_level->ID ) && ! empty( $membership_level->enddate );
@@ -690,7 +629,7 @@ class PMPRO_Chapters_Reports {
 
 					$user_info['end_date'] = ( ! empty( $last_order_info['end_date'] ) )
 						? date_i18n( 'm/d/y', strtotime( $last_order_info['end_date'] ) )
-						: $this->get_end_date( $membership_level, $user->ID );
+						: self::get_end_date( $membership_level, $user->ID );
 
 					if ( empty( $user_info['end_date'] ) ) {
 						$user_info['end_date_day'] = $user_info['end_date_year'] = '';
@@ -700,7 +639,7 @@ class PMPRO_Chapters_Reports {
 						$user_info['end_date_year'] = $days[2];
 					}
 
-					$user_info['since'] = $this->get_member_since_date( $user->ID );
+					$user_info['since'] = self::get_member_since_date( $user->ID );
 
 				}
 				$user_info['street']   = get_user_meta( $user->ID, 'member_addr_street_1', true );
@@ -888,7 +827,7 @@ class PMPRO_Chapters_Reports {
 	 *
 	 * @return string
 	 */
-	private function remove_wrong_since_dates( $member_since_date, $user_id ) {
+	public static function remove_wrong_since_dates( $member_since_date, $user_id ) {
 
 		if ( strtotime( "1980" ) > strtotime( $member_since_date ) ) {
 			update_user_meta( $user_id, 'member_member_since_date', '' );
@@ -911,13 +850,17 @@ class PMPRO_Chapters_Reports {
 	 *
 	 * @return string
 	 */
-	private function check_description( $activity_type, $pmpro_orders, $legacy_orders ) {
+	public static function check_description( $activity_type, $pmpro_orders, array $legacy_orders = array() ) {
 
+		if ( ! is_array( $pmpro_orders ) ) {
+			$pmpro_orders = array();
+		}
+		
 		if ( ! empty( $activity_type )
 		     && false === strpos( strtolower( $activity_type ), 'renew' )
 		     && false === strpos( strtolower( $activity_type ), 'join' ) ) {
-			$is_renewal = 2 <= count( $pmpro_orders )
-			              || ( 1 === count( $pmpro_orders ) && 0 < count( $legacy_orders ) );
+			$is_renewal = ( 2 <= count( $pmpro_orders )
+			                || ( 1 === count( $pmpro_orders ) && 0 < count( $legacy_orders ) ) );
 			$order_type = $is_renewal ? ' - Renew ' : ' - Join ';
 
 			if ( false !== strpos( strtolower( $activity_type ), 'individual' ) ) {
