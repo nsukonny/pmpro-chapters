@@ -85,7 +85,7 @@ class PMPRO_Rebate_Reports {
             <form method="post" name="report_form">
                 <input type="hidden" name="action" value="rebate_export">
                 <h4>
-                    <strong><?php _e( 'Rabate reports', 'pmpro-chapters' ); ?></strong>
+                    <strong><?php _e( 'Rebate reports', 'pmpro-chapters' ); ?></strong>
                 </h4>
                 <p>
                     From: <input type="date" name="from" value="<?php echo date( 'Y' ); ?>-01-01">
@@ -99,7 +99,7 @@ class PMPRO_Rebate_Reports {
 		} else {
 			?>
             <h4>
-                <strong><?php _e( 'Rabate reports', 'pmpro-chapters' ); ?></strong>
+                <strong><?php _e( 'Rebate reports', 'pmpro-chapters' ); ?></strong>
             </h4>
             <p>
                 You must be administrator for take reports
@@ -209,41 +209,44 @@ class PMPRO_Rebate_Reports {
 	private function get_members() {
 
 		if ( ! $this->members ) {
-			$args        = array(
+			$args = array(
 				'orderby'    => array(
-					'last_name'     => 'ASC',
-					'member_status' => 'ASC',
+					'last_name' => 'ASC',
+					//'member_status' => 'ASC',
 				),
 				'meta_query' => array(
-					'relation'      => 'AND',
-					'last_name'     => array(
+					'relation'  => 'AND',
+					'last_name' => array(
 						'key'     => 'last_name',
 						'compare' => 'EXISTS',
-					),
+					),/*
 					'member_status' => array(
 						'key'     => 'member_status',
 						'compare' => 'EXISTS',
-					),
-					array(
+					),*/
+					/*array(
 						'relation'            => 'OR',
-						'pmpro_bcountry'      => array(
-							'key'   => 'pmpro_bcountry',
-							'value' => 'US',
+						'member_addr_state'   => array(
+							'key'     => 'member_addr_state',
+							'compare' => 'IN',
+							'value'   => $this->get_all_states_list(),
 						),
 						'member_addr_country' => array(
-							'key'   => 'member_addr_country',
-							'value' => 'USA',
+							'key'     => 'member_addr_country',
+							'compare' => 'IN',
+							'value'   => array(
+								'USA',
+								'US',
+								'United States',
+							),
 						),
-					),
-				)
+					),*/
+				),
 			);
+
 			$users_query = new WP_User_Query( $args );
 			if ( $users_query->get_total() ) {
 				foreach ( $users_query->get_results() as $user ) {
-					if ( 0 === count( $this->get_legacy_orders()[ $user->ID ] ) && 0 === count( $this->get_pmpro_orders()[ $user->ID ] ) ) {
-						continue;
-					}
-
 					$chapter_id = get_user_meta( $user->ID, 'chapter_id', true );
 					if ( ! $chapter_id || 0 > $chapter_id ) {
 						continue;
@@ -264,7 +267,10 @@ class PMPRO_Rebate_Reports {
 						$user->data->membership_level = pmpro_getMembershipLevelForUser( $user->ID );
 					}
 
-					$this->members[ $chapter_id ][] = $user;
+					if ( null !== $user->data->membership_level
+					     && isset( $user->data->membership_level->name ) ) {
+						$this->members[ $chapter_id ][] = $user;
+					}
 				}
 			}
 		}
@@ -293,8 +299,8 @@ class PMPRO_Rebate_Reports {
 					$this->pmpro_orders[ $pmpro_order->user_id ] = array();
 				}
 
-				if ( strtotime( $_REQUEST['from'] ) > strtotime( $pmpro_order->timestamp )
-				     || strtotime( $_REQUEST['to'] ) < strtotime( $pmpro_order->timestamp ) ) {
+				if ( strtotime( $_REQUEST['from'] . ' 00:00:00' ) >= strtotime( $pmpro_order->timestamp )
+				     || strtotime( $_REQUEST['to'] . ' 23:59:59' ) <= strtotime( $pmpro_order->timestamp ) ) {
 					continue;
 				}
 
@@ -328,11 +334,6 @@ class PMPRO_Rebate_Reports {
 			foreach ( $legacy_orders as $legacy_order ) {
 				if ( ! isset( $this->legacy_orders[ $legacy_order->activity_member_ID ] ) ) {
 					$this->legacy_orders[ $legacy_order->activity_member_ID ] = array();
-				}
-
-				if ( strtotime( $_REQUEST['from'] ) > strtotime( $legacy_order->activity_date )
-				     || strtotime( $_REQUEST['to'] ) < strtotime( $legacy_order->activity_date ) ) {
-					continue;
 				}
 
 				$this->legacy_orders[ $legacy_order->activity_member_ID ][] = $legacy_order;

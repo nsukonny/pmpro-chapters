@@ -45,30 +45,30 @@ class Rebate_All_Members extends Rebate_Report {
 			}
 		}
 
-		$sheet->setCellValue( 'A' . $row, $title );
-		$sheet->setCellValue( 'B' . $row, __( 'Last Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'C' . $row, __( 'First Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'D' . $row, __( 'Membership Level', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'E' . $row, __( 'Activity Type', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'F' . $row, __( 'Recent Payment Type', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'G' . $row, __( 'Recent Transaction Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'H' . $row, __( 'Current Start Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'I' . $row, __( 'Current Amount Paid in Full', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'J' . $row, __( 'Previous Activity Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'K' . $row, __( 'Previous Membership  Level', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'L' . $row, __( 'Amount Chapter Rebate', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'M' . $row, __( 'Amount NCGR National Revenue', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'N' . $row, __( 'Current Expiration Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'O' . $row, __( 'Address Line 1', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'P' . $row, __( 'City', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'Q' . $row, __( 'State', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'R' . $row, __( 'Country', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'S' . $row, __( 'Zip Code', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'T' . $row, __( 'Phone Number 1', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'U' . $row, __( 'Combined Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'V' . $row, __( 'Email', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'W' . $row, __( 'Active Since Date', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'X' . $row, __( 'Deceased Members', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'B' . $row, $title );
+		$sheet->setCellValue( 'C' . $row, __( 'Last Name', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'D' . $row, __( 'First Name', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'E' . $row, __( 'Membership Level', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'F' . $row, __( 'Activity Type', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'G' . $row, __( 'Recent Payment Type', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'H' . $row, __( 'Recent Transaction Date', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'I' . $row, __( 'Current Start Date', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'J' . $row, __( 'Current Amount Paid in Full', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'K' . $row, __( 'Amount Chapter Rebate', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'L' . $row, __( 'Amount NCGR National Revenue', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'M' . $row, __( 'Current Expiration Date', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'N' . $row, __( 'Previous Activity Date', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'O' . $row, __( 'Previous Activity Type', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'P' . $row, __( 'Address Line 1', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'Q' . $row, __( 'City', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'R' . $row, __( 'State', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'S' . $row, __( 'Country', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'T' . $row, __( 'Zip Code', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'U' . $row, __( 'Phone Number 1', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'V' . $row, __( 'Combined Name', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'W' . $row, __( 'Email', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'X' . $row, __( 'Active Since Date', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'Y' . $row, __( 'Deceased Members', 'pmpro-chapters' ) );
 
 		return $sheet;
 	}
@@ -84,12 +84,7 @@ class Rebate_All_Members extends Rebate_Report {
 	 */
 	private function set_rows( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet ) {
 
-		$row    = 2;
-		$totals = array(
-			'current_amount' => 0,
-			'rebate'         => 0,
-			'revenue'        => 0,
-		);
+		$row = 2;
 
 		if ( 0 < count( $this->chapters ) ) {
 			foreach ( $this->chapters as $chapter ) {
@@ -103,6 +98,7 @@ class Rebate_All_Members extends Rebate_Report {
 						return $a[0];
 					}, get_user_meta( $member->ID ) );
 
+
 					$last_orders = $this->get_last_orders_info( $member->ID );
 
 					$start_date          = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( strtotime( $last_orders[0]['start_date'] ) );
@@ -114,11 +110,16 @@ class Rebate_All_Members extends Rebate_Report {
 					$last_name  = isset( $user_meta['last_name'] ) ? $user_meta['last_name'] : '';
 					$first_name = isset( $user_meta['first_name'] ) ? $user_meta['first_name'] : '';
 
+					if ( isset( $last_orders[0]['start_date'] )
+					     && ( strtotime( $_REQUEST['from'] . ' 00:00:00' ) > strtotime( $last_orders[0]['start_date'] )
+					          || strtotime( $_REQUEST['to'] . ' 23:59:59' ) < strtotime( $last_orders[0]['start_date'] ) ) ) {
+						$last_orders[0]['amount'] = 0;
+					}
+
 					$deceased = 'deceased' == strtolower( get_user_meta( $member->ID, 'member_status', true ) );
-					$rebate   = 0 < $last_orders[0]['amount'] ? round( $last_orders[0]['amount'] / 3 ) : 0;
 
 					if ( ! $this->chapter_id ) {
-						$sheet->setCellValue( 'A' . $row, $chapter->post_title );
+						$sheet->setCellValue( 'B' . $row, $chapter->post_title );
 					}
 
 					$phone = trim( $user_meta['pmpro_bphone'] );
@@ -126,57 +127,48 @@ class Rebate_All_Members extends Rebate_Report {
 					$phone = empty( $phone ) ? trim( $user_meta['member_phone_1'] ) : $phone;
 					$phone = empty( $phone ) ? $user_meta['member_phone_2'] : $phone;
 
-					$sheet->setCellValue( 'B' . $row, $last_name );
-					$sheet->setCellValue( 'C' . $row, $first_name );
-					$sheet->setCellValue( 'D' . $row, $member->data->membership_level_name );
-					$sheet->setCellValue( 'E' . $row, $last_orders[0]['description'] );
-					$sheet->setCellValue( 'F' . $row, $last_orders[0]['payment_type'] );
-					$sheet->setCellValue( 'G' . $row, $start_date );
+					$sheet->setCellValue( 'C' . $row, $last_name );
+					$sheet->setCellValue( 'D' . $row, $first_name );
+					$sheet->setCellValue( 'E' . $row, $member->data->membership_level_name );
+					$sheet->setCellValue( 'F' . $row, $last_orders[0]['description'] );
+					$sheet->setCellValue( 'G' . $row, $last_orders[0]['payment_type'] );
 					$sheet->setCellValue( 'H' . $row, $start_date );
-					$sheet->setCellValue( 'I' . $row, '$' . $last_orders[0]['amount'] );
-					$sheet->setCellValue( 'J' . $row, $previous_start_date );
-					$sheet->setCellValue( 'K' . $row, isset( $last_orders[1] ) ? $last_orders[1]['description'] : '' );
-					$sheet->setCellValue( 'L' . $row, '$' . $rebate );
-					$sheet->setCellValue( 'M' . $row, '$' . ( $last_orders[0]['amount'] - $rebate ) );
-					$sheet->setCellValue( 'N' . $row, $end_date );
-					$sheet->setCellValue( 'O' . $row, isset( $user_meta['member_addr_street_1'] ) ? $user_meta['member_addr_street_1'] : '' );
-					$sheet->setCellValue( 'P' . $row, isset( $user_meta['member_addr_city'] ) ? $user_meta['member_addr_city'] : '' );
-					$sheet->setCellValue( 'Q' . $row, isset( $user_meta['member_addr_state'] ) ? $user_meta['member_addr_state'] : '' );
-					$sheet->setCellValue( 'R' . $row, isset( $user_meta['member_addr_country'] ) ? $user_meta['member_addr_country'] : $user_meta['pmpro_bcountry'] );
-					$sheet->setCellValue( 'S' . $row, isset( $user_meta['member_addr_zip'] ) ? $user_meta['member_addr_zip'] : '' );
-					$sheet->setCellValue( 'T' . $row, $phone );
-					$sheet->setCellValue( 'U' . $row, $first_name . ' ' . $last_name );
-					$sheet->setCellValue( 'V' . $row, isset( $user_meta['pmpro_bemail'] ) ? $user_meta['pmpro_bemail'] : '' );
+					$sheet->setCellValue( 'I' . $row, $start_date );
+					$sheet->setCellValue( 'J' . $row, $last_orders[0]['amount'] );
+					$sheet->setCellValue( 'K' . $row, $last_orders[0]['rebate'] );
+					$sheet->setCellValue( 'L' . $row, $last_orders[0]['revenue'] );
+					$sheet->setCellValue( 'M' . $row, $end_date );
+					$sheet->setCellValue( 'N' . $row, $previous_start_date );
+					$sheet->setCellValue( 'O' . $row, isset( $last_orders[1] ) ? $last_orders[1]['description'] : '' );
+					$sheet->setCellValue( 'P' . $row, isset( $user_meta['member_addr_street_1'] ) ? $user_meta['member_addr_street_1'] : '' );
+					$sheet->setCellValue( 'Q' . $row, isset( $user_meta['member_addr_city'] ) ? $user_meta['member_addr_city'] : '' );
+					$sheet->setCellValue( 'R' . $row, isset( $user_meta['member_addr_state'] ) ? $user_meta['member_addr_state'] : '' );
+					$sheet->setCellValue( 'S' . $row, isset( $user_meta['member_addr_country'] ) ? mb_strtoupper( $user_meta['member_addr_country'] ) : '' );
+					$sheet->setCellValue( 'T' . $row, isset( $user_meta['member_addr_zip'] ) ? $user_meta['member_addr_zip'] : '' );
+					$sheet->setCellValue( 'U' . $row, $phone );
+					$sheet->setCellValue( 'V' . $row, $first_name . ' ' . $last_name );
+					$sheet->setCellValue( 'W' . $row, isset( $user_meta['pmpro_bemail'] ) ? $user_meta['pmpro_bemail'] : '' );
 
 					$member_since_date = PMPRO_Chapters_Reports::get_member_since_date( $member->ID );
 					if ( ! empty( $member_since_date ) ) {
 						$since_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(
 							strtotime( $member_since_date ) );
-						$sheet->setCellValue( 'W' . $row, $since_date );
+						$sheet->setCellValue( 'X' . $row, $since_date );
 					}
 
-					$sheet->setCellValue( 'X' . $row, $deceased ? 'Deceased' : '' );
-
-					$totals['current_amount'] += $last_orders[0]['amount'];
-					$totals['rebate']         += $rebate;
-					$totals['revenue']        += $last_orders[0]['amount'] - $rebate;
+					$sheet->setCellValue( 'Y' . $row, $deceased ? 'Deceased' : '' );
 					$row ++;
 				}
 			}
 		}
 
-		$row += 2;
-
-		if ( $this->chapter_id ) {
-			$sheet->setCellValue( 'A' . $row, __( 'Total Members: ', 'pmpro-chapters' ) . count( $this->members[ $this->chapter_id ] ) );
-			$row ++;
-			$sheet->setCellValue( 'A' . $row, __( 'Total Paid: ' . '$' . $totals['current_amount'], 'pmpro-chapters' ) );
-		} else {
-			$sheet->setCellValue( 'A' . $row, __( 'TOTALS', 'pmpro-chapters' ) );
-			$sheet->setCellValue( 'I' . $row, '$' . $totals['current_amount'] );
-			$sheet->setCellValue( 'L' . $row, '$' . $totals['rebate'] );
-			$sheet->setCellValue( 'M' . $row, '$' . $totals['revenue'] );
-		}
+		$last_data_row = $row - 1;
+		$row           += 2;
+		$total_col     = $this->chapter_id ? 'B' : 'A';
+		$sheet->setCellValue( $total_col . $row, '="' . __( 'Total Members: ', 'pmpro-chapters' ) . '"&COUNTIF(C2:C' . $last_data_row . ', "<>")' );
+		$sheet->setCellValue( $total_col . ++ $row, '="' . __( 'Total Paid: $', 'pmpro-chapters' ) . '"&SUM(J2:J' . $last_data_row . ')' );
+		$sheet->setCellValue( $total_col . ++ $row, '="' . __( 'Total Rebate: $', 'pmpro-chapters' ) . '"&SUM(K2:K' . $last_data_row . ')' );
+		$sheet->setCellValue( $total_col . ++ $row, '="' . __( 'Total Revenue: $', 'pmpro-chapters' ) . '"&SUM(L2:L' . $last_data_row . ')' );
 
 		return $sheet;
 	}
@@ -205,7 +197,7 @@ class Rebate_All_Members extends Rebate_Report {
 		$sheet->setTitle( substr( $title, 0, 30 ) );
 
 		$sheet->getColumnDimension( 'A' )->setWidth( 30 );
-		$sheet->getColumnDimension( 'B' )->setAutoSize( true );
+		$sheet->getColumnDimension( 'B' )->setWidth( 30 );
 		$sheet->getColumnDimension( 'C' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'D' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'E' )->setAutoSize( true );
@@ -228,22 +220,34 @@ class Rebate_All_Members extends Rebate_Report {
 		$sheet->getColumnDimension( 'V' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'W' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'X' )->setAutoSize( true );
+		$sheet->getColumnDimension( 'Y' )->setAutoSize( true );
 
-		$sheet->getStyle( 'G2:G' . $sheet->getHighestRow() )
-		      ->getNumberFormat()
-		      ->setFormatCode( 'mm/dd/yyyy' );
 		$sheet->getStyle( 'H2:H' . $sheet->getHighestRow() )
 		      ->getNumberFormat()
 		      ->setFormatCode( 'mm/dd/yyyy' );
-		$sheet->getStyle( 'J2:J' . $sheet->getHighestRow() )
+		$sheet->getStyle( 'I2:I' . $sheet->getHighestRow() )
 		      ->getNumberFormat()
 		      ->setFormatCode( 'mm/dd/yyyy' );
-		$sheet->getStyle( 'U2:U' . $sheet->getHighestRow() )
+		$sheet->getStyle( 'M2:M' . $sheet->getHighestRow() )
+		      ->getNumberFormat()
+		      ->setFormatCode( 'mm/dd/yyyy' );
+		$sheet->getStyle( 'N2:N' . $sheet->getHighestRow() )
+		      ->getNumberFormat()
+		      ->setFormatCode( 'mm/dd/yyyy' );
+		$sheet->getStyle( 'X2:X' . $sheet->getHighestRow() )
 		      ->getNumberFormat()
 		      ->setFormatCode( 'mm/dd/yyyy' );
 
-		if ( ! $this->chapter_id ) {
-			//$sheet->getStyle( 'A2:A' . $sheet->getHighestRow() )->getFill()->setFillType( \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID )->getStartColor()->setARGB( 'f68fb0' );
+		$align_left = \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT;
+		$sheet->getStyle( 'T2:T' . $sheet->getHighestRow() )
+		      ->getAlignment()
+		      ->setHorizontal( $align_left );
+		$sheet->getStyle( 'U2:U' . $sheet->getHighestRow() )
+		      ->getAlignment()
+		      ->setHorizontal( $align_left );
+
+		if ( $this->chapter_id ) {
+			$sheet->removeColumnByIndex( 1 );
 		}
 
 		return $sheet;

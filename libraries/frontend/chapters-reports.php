@@ -499,6 +499,14 @@ class PMPRO_Chapters_Reports {
 		      ->getNumberFormat()
 		      ->setFormatCode( 'mm/dd/yyyy' );
 
+		$align_left = \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT;
+		$sheet->getStyle( 'M2:M' . $sheet->getHighestRow() )
+		      ->getAlignment()
+		      ->setHorizontal( $align_left );
+		$sheet->getStyle( 'N2:N' . $sheet->getHighestRow() )
+		      ->getAlignment()
+		      ->setHorizontal( $align_left );
+
 	}
 
 	/**
@@ -697,6 +705,11 @@ class PMPRO_Chapters_Reports {
 						strtotime( $user['since'] ) );
 				}
 
+				$phone = trim( get_user_meta( $user['user_id'], 'pmpro_bphone', true ) );
+				$phone = empty( $phone ) ? trim( get_user_meta( $user['user_id'], 'billing_phone', true ) ) : $phone;
+				$phone = empty( $phone ) ? trim( get_user_meta( $user['user_id'], 'member_phone_1', true ) ) : $phone;
+				$phone = empty( $phone ) ? get_user_meta( $user['user_id'], 'member_phone_2', true ) : $phone;
+
 				$sheet->setCellValue( 'Q' . $row, $since_date );
 				$sheet->setCellValue( 'E' . $row, $user['activity'] );
 
@@ -705,7 +718,7 @@ class PMPRO_Chapters_Reports {
 				$sheet->setCellValue( 'K' . $row, $user['state'] );
 				$sheet->setCellValue( 'L' . $row, $user['country'] );
 				$sheet->setCellValue( 'M' . $row, $user['zip'] );
-				$sheet->setCellValue( 'N' . $row, $user['phone'] );
+				$sheet->setCellValue( 'N' . $row, $phone );
 				$sheet->setCellValue( 'O' . $row, $user['all_name'] );
 				$sheet->setCellValue( 'P' . $row, $user['email'] );
 				$sheet->setCellValue( 'R' . $row, $user['status'] );
@@ -855,7 +868,7 @@ class PMPRO_Chapters_Reports {
 		if ( ! is_array( $pmpro_orders ) ) {
 			$pmpro_orders = array();
 		}
-		
+
 		if ( ! empty( $activity_type )
 		     && false === strpos( strtolower( $activity_type ), 'renew' )
 		     && false === strpos( strtolower( $activity_type ), 'join' ) ) {

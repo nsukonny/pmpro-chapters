@@ -36,11 +36,12 @@ class Rebate_Summary extends Rebate_Report {
 	private function set_titles( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet ) {
 
 		$row = 1;
-		$sheet->setCellValue( 'A' . $row, __( 'Chapter Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'B' . $row, __( 'Member Counter', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'C' . $row, __( 'Amount Paid Full', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'D' . $row, __( 'Amount Chapter Rebate', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'E' . $row, __( 'Amount NCGR National Revenue', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'A' . $row, __( 'Date of Report: ' . date( 'm/d/y' ), 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'B' . $row, __( 'Chapter Name', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'C' . $row, __( 'Member Counter', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'D' . $row, __( 'Amount Paid Full', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'E' . $row, __( 'Amount Chapter Rebate', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'F' . $row, __( 'Amount NCGR National Revenue', 'pmpro-chapters' ) );
 
 		return $sheet;
 	}
@@ -56,42 +57,29 @@ class Rebate_Summary extends Rebate_Report {
 	 */
 	private function set_rows( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet ) {
 
-		$row    = 2;
-		$totals = array(
-			'members' => 0,
-			'paid'    => 0,
-			'rebate'  => 0,
-			'ncgr'    => 0,
-		);
+		$row = 2;
 
 		if ( 0 < count( $this->chapters ) ) {
 			foreach ( $this->chapters as $chapter ) {
-				$sheet->setCellValue( 'A' . $row, $chapter->post_title );
+				$sheet->setCellValue( 'B' . $row, $chapter->post_title );
 
 				$count_members = isset( $this->members[ $chapter->ID ] ) ? count( $this->members[ $chapter->ID ] ) : 0;
-				$sheet->setCellValue( 'B' . $row, $count_members );
+				$sheet->setCellValue( 'C' . $row, $count_members );
 
-				$amount_paid = $this->get_amount_paid( $this->members[ $chapter->ID ] );
-				$sheet->setCellValue( 'C' . $row, '$' . $amount_paid );
+				$amount = $this->get_amount_paid( $this->members[ $chapter->ID ] );
+				$sheet->setCellValue( 'D' . $row, $amount['paid'] );
+				$sheet->setCellValue( 'E' . $row, $amount['rebate'] );
+				$sheet->setCellValue( 'F' . $row, $amount['revenue'] );
 
-				$rebate = round( $amount_paid / 3 );
-				$ncgr   = $amount_paid - $rebate;
-				$sheet->setCellValue( 'D' . $row, '$' . $rebate );
-				$sheet->setCellValue( 'E' . $row, '$' . $ncgr );
-
-				$totals['members'] += $count_members;
-				$totals['rebate']  += $rebate;
-				$totals['ncgr']    += $ncgr;
-				$totals['paid']    += $amount_paid;
 				$row ++;
 			}
 		}
 
-		$row ++;
-		$sheet->setCellValue( 'B' . $row, $totals['members'] );
-		$sheet->setCellValue( 'C' . $row, '$' . $totals['paid'] );
-		$sheet->setCellValue( 'D' . $row, '$' . $totals['rebate'] );
-		$sheet->setCellValue( 'E' . $row, '$' . $totals['ncgr'] );
+		$last_data_row = $row - 1;
+		$sheet->setCellValue( 'A' . ++ $row, '="' . __( 'Total Members: ', 'pmpro-chapters' ) . '"&SUM(C2:C' . $last_data_row . ')' );
+		$sheet->setCellValue( 'A' . ++ $row, '="' . __( 'Total Paid: $', 'pmpro-chapters' ) . '"&SUM(D2:D' . $last_data_row . ')' );
+		$sheet->setCellValue( 'A' . ++ $row, '="' . __( 'Total Rebate: $', 'pmpro-chapters' ) . '"&SUM(E2:E' . $last_data_row . ')' );
+		$sheet->setCellValue( 'A' . ++ $row, '="' . __( 'Total NCGR: $', 'pmpro-chapters' ) . '"&SUM(F2:F' . $last_data_row . ')' );
 
 		return $sheet;
 	}
@@ -114,6 +102,7 @@ class Rebate_Summary extends Rebate_Report {
 		$sheet->getColumnDimension( 'C' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'D' )->setAutoSize( true );
 		$sheet->getColumnDimension( 'E' )->setAutoSize( true );
+		$sheet->getColumnDimension( 'F' )->setAutoSize( true );
 
 		return $sheet;
 	}
