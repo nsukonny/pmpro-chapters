@@ -212,35 +212,13 @@ class PMPRO_Rebate_Reports {
 			$args = array(
 				'orderby'    => array(
 					'last_name' => 'ASC',
-					//'member_status' => 'ASC',
 				),
 				'meta_query' => array(
 					'relation'  => 'AND',
 					'last_name' => array(
 						'key'     => 'last_name',
 						'compare' => 'EXISTS',
-					),/*
-					'member_status' => array(
-						'key'     => 'member_status',
-						'compare' => 'EXISTS',
-					),*/
-					/*array(
-						'relation'            => 'OR',
-						'member_addr_state'   => array(
-							'key'     => 'member_addr_state',
-							'compare' => 'IN',
-							'value'   => $this->get_all_states_list(),
-						),
-						'member_addr_country' => array(
-							'key'     => 'member_addr_country',
-							'compare' => 'IN',
-							'value'   => array(
-								'USA',
-								'US',
-								'United States',
-							),
-						),
-					),*/
+					),
 				),
 			);
 
@@ -257,9 +235,10 @@ class PMPRO_Rebate_Reports {
 					}
 
 					$user_membership_level_name = $this->get_membership_level( $user->ID );
+					/*
 					if ( false === $user_membership_level_name ) {
 						continue;
-					}
+					}*/
 
 					$user->data->membership_level_name = $user_membership_level_name;
 					$user->data->membership_level      = null;
