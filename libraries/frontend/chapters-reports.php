@@ -892,6 +892,25 @@ class PMPRO_Chapters_Reports {
 		return $activity_type;
 	}
 
+	/**
+	 * Remove from text words like Renewal and Join
+	 *
+	 * @since 1.0.3
+	 *
+	 * @param $description
+	 *
+	 * @return string
+	 */
+	public static function clear_description( $description ) {
+
+		if ( ! empty( $description ) ) {
+			$description = str_replace( 'Join - ', '', $description );
+			$description = str_replace( 'Renew - ', '', $description );
+		}
+
+		return $description;
+	}
+
 }
 
 function pmpro_chapters_reports_runner() {

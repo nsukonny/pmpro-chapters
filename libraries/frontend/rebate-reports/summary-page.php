@@ -60,6 +60,25 @@ class Rebate_Summary extends Rebate_Report {
 		$row = 2;
 
 		if ( 0 < count( $this->chapters ) ) {
+
+			//Remove members if his expiration date not at range
+			foreach ( $this->members as $chapter_id => $chapter_members ) {
+				foreach ( $chapter_members as $member_key => $member ) {
+					$last_orders     = $this->get_last_orders_info( $member->ID );
+					$last_two_orders = $this->get_last_two_orders( $last_orders );
+
+					if ( 0 == count( $last_two_orders ) ) {
+						$member_expiration_time = ! empty( $member->membership_level->enddate ) ? $member->membership_level->enddate : null;
+
+						if ( $member_expiration_time
+						     && ( $member_expiration_time < strtotime( $_REQUEST['from'] . ' 00:00:00' )
+						          || $member_expiration_time > strtotime( $_REQUEST['to'] . ' 23:59:59' ) ) ) {
+							unset( $this->members[ $chapter_id ][ $member_key ] );
+						}
+					}
+				}
+			}
+
 			foreach ( $this->chapters as $chapter ) {
 				$sheet->setCellValue( 'B' . $row, $chapter->post_title );
 
@@ -73,6 +92,7 @@ class Rebate_Summary extends Rebate_Report {
 
 				$row ++;
 			}
+
 		}
 
 		$last_data_row = $row - 1;

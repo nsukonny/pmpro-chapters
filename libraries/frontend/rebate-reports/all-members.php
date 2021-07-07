@@ -48,7 +48,7 @@ class Rebate_All_Members extends Rebate_Report {
 		$sheet->setCellValue( 'B' . $row, $title );
 		$sheet->setCellValue( 'C' . $row, __( 'Last Name', 'pmpro-chapters' ) );
 		$sheet->setCellValue( 'D' . $row, __( 'First Name', 'pmpro-chapters' ) );
-		$sheet->setCellValue( 'E' . $row, __( 'Membership Level', 'pmpro-chapters' ) );
+		$sheet->setCellValue( 'E' . $row, __( 'Current Membership Level', 'pmpro-chapters' ) );
 		$sheet->setCellValue( 'F' . $row, __( 'Activity Type', 'pmpro-chapters' ) );
 		$sheet->setCellValue( 'G' . $row, __( 'Recent Payment Type', 'pmpro-chapters' ) );
 		$sheet->setCellValue( 'H' . $row, __( 'Recent Transaction Date', 'pmpro-chapters' ) );
@@ -98,23 +98,24 @@ class Rebate_All_Members extends Rebate_Report {
 						return $a[0];
 					}, get_user_meta( $member->ID ) );
 
+					$last_orders     = $this->get_last_orders_info( $member->ID );
+					$last_two_orders = $this->get_last_two_orders( $last_orders );
 
-					$last_orders = $this->get_last_orders_info( $member->ID );
+					$start_date          = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( strtotime( $last_two_orders['last']['start_date'] ) );
+					$previous_start_date = isset( $last_two_orders['prev'] ) ? \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( strtotime( $last_two_orders['prev']['start_date'] ) ) : '';
 
-					$start_date          = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( strtotime( $last_orders[0]['start_date'] ) );
-					$previous_start_date = isset( $last_orders[1] ) ? \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( strtotime( $last_orders[1]['start_date'] ) ) : '';
+					$end_date = '';
+					/* By logic we need expiration date from current transaction, but ladies want see member expiration date.
+					if ( isset( $last_two_orders['last']['end_date'] ) && ! empty( $last_two_orders['last']['end_date'] ) ) {
+						$end_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( $last_two_orders['last']['end_date'] );
+					}*/
 
-					$end_date = PMPRO_Chapters_Reports::get_end_date( $member->data->membership_level, $member->ID );
-					$end_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( strtotime( $end_date ) );
+					if ( $member->member_expiration_time ) {
+						$end_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel( $member->member_expiration_time );
+					}
 
 					$last_name  = isset( $user_meta['last_name'] ) ? $user_meta['last_name'] : '';
 					$first_name = isset( $user_meta['first_name'] ) ? $user_meta['first_name'] : '';
-
-					if ( isset( $last_orders[0]['start_date'] )
-					     && ( strtotime( $_REQUEST['from'] . ' 00:00:00' ) > strtotime( $last_orders[0]['start_date'] )
-					          || strtotime( $_REQUEST['to'] . ' 23:59:59' ) < strtotime( $last_orders[0]['start_date'] ) ) ) {
-						$last_orders[0]['amount'] = 0;
-					}
 
 					$deceased = 'deceased' == strtolower( get_user_meta( $member->ID, 'member_status', true ) );
 
@@ -127,19 +128,37 @@ class Rebate_All_Members extends Rebate_Report {
 					$phone = empty( $phone ) ? trim( $user_meta['member_phone_1'] ) : $phone;
 					$phone = empty( $phone ) ? $user_meta['member_phone_2'] : $phone;
 
+					//$activity_type         = '';
+					$membership_level_name = 'None';
+
+					foreach ( $this->membership_levels as $level ) {
+						if ( $level->id == $member->membership_level->id ) {
+							$membership_level_name = $level->name . ' $' . round( $level->billing_amount );
+
+							break;
+						}
+					}
+
+					/*
+					if ( isset( $this->legacy_orders[ $member->ID ] ) ) {
+						$activity_type = PMPRO_Chapters_Reports::check_description( $member->membership_level->name, $this->pmpro_orders[ $member->ID ], $this->legacy_orders[ $member->ID ] );
+					} else {
+						$activity_type = PMPRO_Chapters_Reports::check_description( $member->membership_level->name, $this->pmpro_orders[ $member->ID ], $this->legacy_orders );
+					}*/
+
 					$sheet->setCellValue( 'C' . $row, $last_name );
 					$sheet->setCellValue( 'D' . $row, $first_name );
-					$sheet->setCellValue( 'E' . $row, $member->data->membership_level_name );
-					$sheet->setCellValue( 'F' . $row, $last_orders[0]['description'] );
-					$sheet->setCellValue( 'G' . $row, $last_orders[0]['payment_type'] );
+					$sheet->setCellValue( 'E' . $row, $membership_level_name );
+					$sheet->setCellValue( 'F' . $row, $last_two_orders['last']['description'] );
+					$sheet->setCellValue( 'G' . $row, $last_two_orders['last']['payment_type'] );
 					$sheet->setCellValue( 'H' . $row, $start_date );
 					$sheet->setCellValue( 'I' . $row, $start_date );
-					$sheet->setCellValue( 'J' . $row, $last_orders[0]['amount'] );
-					$sheet->setCellValue( 'K' . $row, $last_orders[0]['rebate'] );
-					$sheet->setCellValue( 'L' . $row, $last_orders[0]['revenue'] );
+					$sheet->setCellValue( 'J' . $row, $last_two_orders['last']['amount'] );
+					$sheet->setCellValue( 'K' . $row, $last_two_orders['last']['rebate'] );
+					$sheet->setCellValue( 'L' . $row, $last_two_orders['last']['revenue'] );
 					$sheet->setCellValue( 'M' . $row, $end_date );
 					$sheet->setCellValue( 'N' . $row, $previous_start_date );
-					$sheet->setCellValue( 'O' . $row, isset( $last_orders[1] ) ? $last_orders[1]['description'] : '' );
+					$sheet->setCellValue( 'O' . $row, isset( $last_two_orders['prev'] ) ? $last_two_orders['prev']['description'] : '' );
 					$sheet->setCellValue( 'P' . $row, isset( $user_meta['member_addr_street_1'] ) ? $user_meta['member_addr_street_1'] : '' );
 					$sheet->setCellValue( 'Q' . $row, isset( $user_meta['member_addr_city'] ) ? $user_meta['member_addr_city'] : '' );
 					$sheet->setCellValue( 'R' . $row, isset( $user_meta['member_addr_state'] ) ? $user_meta['member_addr_state'] : '' );

@@ -25,7 +25,7 @@ class PMPRO_Chapters {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private $version = '1.0.3';
+	private $version = '1.0.1';
 
 	/**
 	 * Instantiate the main class
