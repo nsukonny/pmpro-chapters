@@ -72,14 +72,21 @@ abstract class Rebate_Report {
 	protected $chapter_id;
 
 	/**
+	 * LIst of last member orders by member_id
+	 * @var array
+	 */
+	protected $last_orders;
+
+	/**
 	 * Report constructor.
-	 *
-	 * @since 1.0.3
 	 *
 	 * @param \PhpOffice\PhpSpreadsheet\Spreadsheet $spreadsheet
 	 * @param $chapters
 	 * @param $members
 	 * @param $pmpro_orders
+	 *
+	 * @since 1.0.3
+	 *
 	 */
 	public function __construct( \PhpOffice\PhpSpreadsheet\Spreadsheet $spreadsheet, $chapters, $members, $pmpro_orders, $legacy_orders ) {
 
@@ -88,15 +95,17 @@ abstract class Rebate_Report {
 		$this->members       = $members;
 		$this->pmpro_orders  = $pmpro_orders;
 		$this->legacy_orders = $legacy_orders;
+		$this->last_orders   = array();
 
 	}
 
 	/**
 	 * Safe set membership levels
 	 *
+	 * @param $membership_levels
+	 *
 	 * @since 1.0.3
 	 *
-	 * @param $membership_levels
 	 */
 	public function set_membership_levels( $membership_levels ) {
 
@@ -107,9 +116,10 @@ abstract class Rebate_Report {
 	/**
 	 * Add chapter ID for make sheet
 	 *
+	 * @param $chapter_id
+	 *
 	 * @since 1.0.3
 	 *
-	 * @param $chapter_id
 	 */
 	public function set_chapter_id( $chapter_id ) {
 
@@ -120,11 +130,11 @@ abstract class Rebate_Report {
 	/**
 	 * Get amount paid by chapter
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $members
 	 *
 	 * @return array
+	 * @since 1.0.3
+	 *
 	 */
 	protected function get_amount_paid( $members ) {
 
@@ -150,45 +160,49 @@ abstract class Rebate_Report {
 	/**
 	 * Get data from last order for that user
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $user_id
 	 *
 	 * @return array
+	 *
+	 * @since 1.0.3
+	 * @since 1.0.4
 	 */
-	protected function get_last_orders_info( $user_id ) {
+	protected function get_last_orders_info( $user_id ): array {
 
-		$orders           = array();
-		$pmpro_orders     = $this->pmpro_orders[ $user_id ];
-		$member_legacy_id = get_user_meta( $user_id, 'member_legacy_ID', true );
-		$legacy_orders    = isset( $this->legacy_orders[ $member_legacy_id ] ) ? $this->legacy_orders[ $member_legacy_id ] : array();
+		if ( ! isset( $this->last_orders[ $user_id ] ) ) {
 
-		if ( is_array( $pmpro_orders ) && 0 < count( $pmpro_orders ) ) {
-			$orders = $this->orders_from_pmpro( $orders, $pmpro_orders, $legacy_orders );
+			$pmpro_orders     = $this->pmpro_orders[ $user_id ];
+			$member_legacy_id = get_user_meta( $user_id, 'member_legacy_ID', true );
+			$legacy_orders    = isset( $this->legacy_orders[ $member_legacy_id ] ) ? $this->legacy_orders[ $member_legacy_id ] : array();
+			$orders           = $this->orders_from_levels( $user_id, $pmpro_orders, $legacy_orders );
+
+			if ( is_array( $pmpro_orders ) && 0 < count( $pmpro_orders ) ) {
+				$orders = $this->orders_from_pmpro( $orders, $pmpro_orders, $legacy_orders );
+			}
+
+			if ( is_array( $legacy_orders ) && 0 < count( $legacy_orders ) ) {
+				$orders = $this->orders_from_legacy( $orders, $user_id, $pmpro_orders, $legacy_orders );
+			}
+
+			if ( 1 < count( $orders ) ) {
+				usort( $orders, function ( $a, $b ) {
+
+					return strtotime( $a['start_date'] ) <= strtotime( $b['start_date'] );
+
+				} );
+			}
+
+			if ( 0 < count( $orders ) ) {
+				$orders = $this->hide_international( $user_id, $orders );
+				$orders = $this->fill_empty_dates( $orders );
+				$orders = $this->remove_wrong_dates( $orders );
+				$orders = $this->hide_out_of_date( $orders );
+			}
+
+			$this->last_orders[ $user_id ] = 0 !== count( $orders ) ? $orders : $this->get_empty_order();
 		}
 
-		if ( is_array( $legacy_orders ) && 0 < count( $legacy_orders ) ) {
-			$orders = $this->orders_from_legacy( $orders, $user_id, $pmpro_orders, $legacy_orders );
-		}
-
-		$orders = $this->orders_from_levels( $user_id, $orders, $pmpro_orders, $legacy_orders );
-
-		if ( 1 < count( $orders ) ) {
-			usort( $orders, function ( $a, $b ) {
-
-				return strtotime( $a['start_date'] ) <= strtotime( $b['start_date'] );
-
-			} );
-		}
-
-		if ( 0 < count( $orders ) ) {
-			$orders = $this->hide_international( $user_id, $orders );
-			$orders = $this->fill_empty_dates( $orders );
-			$orders = $this->remove_wrong_dates( $orders );
-			$orders = $this->hide_out_of_date( $orders );
-		}
-
-		return 0 !== count( $orders ) ? $orders : $this->get_empty_order();
+		return $this->last_orders[ $user_id ];
 	}
 
 	/**
@@ -196,9 +210,9 @@ abstract class Rebate_Report {
 	 *
 	 * @param $last_orders
 	 *
+	 * @return array
 	 * @since 1.0.3
 	 *
-	 * @return array
 	 */
 	protected function get_last_two_orders( $last_orders ) {
 
@@ -250,9 +264,9 @@ abstract class Rebate_Report {
 	/**
 	 * Make empty order array
 	 *
+	 * @return array
 	 * @since 1.0.3
 	 *
-	 * @return array
 	 */
 	private function get_empty_order() {
 
@@ -271,11 +285,11 @@ abstract class Rebate_Report {
 	/**
 	 * Get legacy order type
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $legacy_order
 	 *
 	 * @return array
+	 * @since 1.0.3
+	 *
 	 */
 	private function get_legacy_type( $legacy_order ) {
 		global $wpdb;
@@ -299,16 +313,19 @@ abstract class Rebate_Report {
 	/**
 	 * Get membership names from member levels history
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $user_id
-	 * @param array $orders
 	 * @param $pmpro_orders
 	 * @param $legacy_orders
 	 *
 	 * @return array
+	 *
+	 * @since 1.0.3
+	 * @since 1.0.4 Add payment type
+	 *              Add transaction date
 	 */
-	private function orders_from_levels( $user_id, array $orders, $pmpro_orders, $legacy_orders ) {
+	private function orders_from_levels( $user_id, $pmpro_orders, $legacy_orders ) {
+
+		$orders = array();
 
 		$membership_levels = pmpro_getMembershipLevelsForUser( $user_id, true );
 		$min_date_time     = strtotime( '2/2/20' );
@@ -320,17 +337,33 @@ abstract class Rebate_Report {
 					continue;
 				}
 
+				$start_date = ! empty( $membership_levels[ $key ]->startdate ) ?
+					date( 'm/d/Y', $membership_levels[ $key ]->startdate ) : '';
+				$end_date   = ! empty( $membership_levels[ $key ]->enddate ) ?
+					date( 'm/d/Y', $membership_levels[ $key ]->enddate ) : '';
+
+				if ( $start_date === $end_date ) {
+					continue;
+				}
+
 				$order                          = $this->get_empty_order();
 				$order['type']                  = 'orders_from_levels';
 				$order['description']           = PMPRO_Chapters_Reports::check_description( $membership_levels[ $key ]->name, $pmpro_orders, $legacy_orders );
-				$order['start_date']            = ! empty( $membership_levels[ $key ]->startdate ) ?
-					date( 'm/d/Y', $membership_levels[ $key ]->startdate ) : '';
+				$order['start_date']            = $start_date;
+				$order['start_timestamp']       = ! empty( $membership_levels[ $key ]->startdate ) ?
+					$membership_levels[ $key ]->startdate : '';
 				$order['end_date']              = ! empty( $membership_levels[ $key ]->enddate ) ?
 					date( 'm/d/Y', $membership_levels[ $key ]->enddate ) : '';
+				$order['end_timestamp']         = ! empty( $membership_levels[ $key ]->enddate ) ?
+					$membership_levels[ $key ]->enddate : '';
 				$order['amount']                = round( $membership_levels[ $key ]->initial_payment );
 				$order['rebate']                = 0 < $membership_levels[ $key ]->initial_payment ? round( $membership_levels[ $key ]->initial_payment / 3 ) : 0;
 				$order['revenue']               = $order['amount'] - $order['rebate'];
 				$order['membership_level_name'] = $membership_levels[ $key ]->name . ( ( 0 < $order['amount'] ) ? ' $' . $order['amount'] . ' per year.' : '' );
+
+				$transaction_detail        = $this->get_transaction_details_for_level( $membership_levels[ $key ], $pmpro_orders, $legacy_orders, $user_id );
+				$order['payment_type']     = $transaction_detail['payment_type'];
+				$order['transaction_date'] = $transaction_detail['transaction_date'];
 
 				$orders[] = $order;
 			}
@@ -349,6 +382,7 @@ abstract class Rebate_Report {
 	private function orders_from_pmpro( $orders, $pmpro_orders, $legacy_orders ) {
 
 		$min_date_time = strtotime( '2/2/20' );
+		$skip_dates    = array_column( $orders, 'start_date' );
 
 		foreach ( $pmpro_orders as $pmpro_order ) {
 			//All orders before february 2020 is wrong. PMPRO started from that date, so skip them.
@@ -356,13 +390,20 @@ abstract class Rebate_Report {
 				continue;
 			}
 
+			$start_date = ! empty( $pmpro_order->timestamp ) ? date( 'm/d/Y', strtotime( $pmpro_order->timestamp ) ) : '';
+			if ( in_array( $start_date, $skip_dates, true ) ) {
+				continue;
+			}
+
 			$period = 1 <= $pmpro_order->cycle_number ? ' per ' . $pmpro_order->cycle_number . ' year' : ' per ' . $pmpro_order->cycle_number . ' years';
 
 			$order['type']                  = 'orders_from_pmpro';
 			$order['description']           = PMPRO_Chapters_Reports::check_description( $pmpro_order->name, $pmpro_orders, $legacy_orders );
-			$order['start_date']            = ! empty( $pmpro_order->timestamp ) ? date( 'm/d/Y', strtotime( $pmpro_order->timestamp ) ) : '';
+			$order['start_date']            = $start_date;
+			$order['start_timestamp']       = ! empty( $pmpro_order->timestamp ) ? strtotime( $pmpro_order->timestamp ) : '';
 			$order['end_date']              = ! empty( $pmpro_order->order_details->expirationyear ) ?
-				date( 'm/d/Y', strtotime( $pmpro_order->order_details->expirationmonth . '/01/' . $pmpro_order->order_details->expirationyear ) ) : '';
+				date( 'm/d/Y', strtotime( $pmpro_order->order_details->expirationmonth . '/01/' . $pmpro_order->order_details->expirationyear ) ) : ''; //TODO this is wrong. Means end date of subscription but here we have end date of card
+			$order['end_timestamp']         = strtotime( $pmpro_order->order_details->expirationmonth . '/01/' . $pmpro_order->order_details->expirationyear );
 			$order['amount']                = round( $pmpro_order->billing_amount );
 			$order['rebate']                = 0 < $pmpro_order->billing_amount ? round( $pmpro_order->billing_amount / 3 ) : 0;
 			$order['revenue']               = $order['amount'] - $order['rebate'];
@@ -391,14 +432,14 @@ abstract class Rebate_Report {
 	/**
 	 * Get orders from legacy orders history
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $orders
 	 * @param $user_id
 	 * @param $pmpro_orders
 	 * @param $legacy_orders
 	 *
 	 * @return array
+	 * @since 1.0.3
+	 *
 	 */
 	private function orders_from_legacy( $orders, $user_id, $pmpro_orders, $legacy_orders ) {
 
@@ -410,16 +451,19 @@ abstract class Rebate_Report {
 			foreach ( $this->legacy_orders[ $member_legacy_id ] as $legacy_order ) {
 				$legacy_type = $this->get_legacy_type( $legacy_order );
 
-				$start_date = ! empty( $legacy_type['start_date'] ) ? date( 'm/d/Y', strtotime( $legacy_type['start_date'] ) ) : '';
+				$start_date      = ! empty( $legacy_type['start_date'] ) ? date( 'm/d/Y', strtotime( $legacy_type['start_date'] ) ) : '';
+				$start_timestamp = ! empty( $legacy_type['start_date'] ) ? strtotime( $legacy_type['start_date'] ) : '';
 				if ( empty( $start_date ) && isset( $legacy_order->activity_date ) && ! empty( $legacy_order->activity_date ) ) {
-					$start_date = date( 'm/d/Y', strtotime( $legacy_order->activity_date ) );
+					$start_date      = date( 'm/d/Y', strtotime( $legacy_order->activity_date ) );
+					$start_timestamp = strtotime( $legacy_order->activity_date );
 				}
 
 				$order                          = $this->get_empty_order();
 				$order['type']                  = 'orders_from_legacy';
 				$order['description']           = ! empty( $legacy_type['description'] ) ? PMPRO_Chapters_Reports::check_description( $legacy_type['description'], $pmpro_orders, $legacy_orders ) : '';
-				$order['payment_type']          = '(legacy)';
+				$order['payment_type']          = '(Legacy)';
 				$order['start_date']            = $start_date;
+				$order['start_timestamp']       = $start_timestamp;
 				$order['amount']                = round( $legacy_type['amount'] );
 				$order['rebate']                = 0 < $legacy_type['amount'] ? round( $legacy_type['amount'] / 3 ) : 0;
 				$order['revenue']               = $order['amount'] - $order['rebate'];
@@ -435,11 +479,11 @@ abstract class Rebate_Report {
 	/**
 	 * Reset amount for non USA users
 	 *
-	 * @since 1.0.1
-	 *
 	 * @param array $orders
 	 *
 	 * @return array
+	 * @since 1.0.1
+	 *
 	 */
 	private function hide_international( $user_id, array $orders ) {
 
@@ -530,11 +574,11 @@ abstract class Rebate_Report {
 	/**
 	 * Set zeto if payment was out of report date
 	 *
-	 * @since 1.0.1
-	 *
 	 * @param array $orders
 	 *
 	 * @return array
+	 * @since 1.0.1
+	 *
 	 */
 	private function hide_out_of_date( array $orders ) {
 
@@ -582,11 +626,11 @@ abstract class Rebate_Report {
 	/**
 	 * Fill empty expiration dates from next transaction start date
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param array $orders
 	 *
 	 * @return array
+	 * @since 1.0.3
+	 *
 	 */
 	private function fill_empty_dates( array $orders ) {
 
@@ -599,6 +643,52 @@ abstract class Rebate_Report {
 		}
 
 		return $orders;
+	}
+
+	/**
+	 * Get transaction type for level from same order, who pay in same day
+	 *
+	 * @param Object $level Object of level membership
+	 * @param array $pmpro_orders List of orders payed by PMPRO
+	 * @param array $legacy_orders LIst of orders payed by Legacy
+	 *
+	 * @return array
+	 *
+	 * @since 1.0.4
+	 */
+	private function get_transaction_details_for_level( $level, $pmpro_orders, $legacy_orders, $user_id ): array {
+
+		$level_date          = date( 'm/d/Y', $level->startdate );
+		$transaction_details = array(
+			'payment_type'     => '',
+			'transaction_date' => '',
+		);
+
+		if ( 0 < count( $pmpro_orders ) ) {
+			foreach ( $pmpro_orders as $pmpro_order ) {
+				$transaction_date = date( 'm/d/Y', strtotime( $pmpro_order->timestamp ) );
+				if ( $transaction_date == $level_date ) {
+					$transaction_details['payment_type']     = $pmpro_order->order_details->gateway;
+					$transaction_details['transaction_date'] = $transaction_date;
+
+					break;
+				}
+			}
+		}
+
+		if ( empty( $payment_type ) && 0 < count( $legacy_orders ) ) {
+			foreach ( $legacy_orders as $legacy_order ) {
+				$transaction_date = date( 'm/d/Y', strtotime( $legacy_order->activity_trans_timestamp ) );
+				if ( $transaction_date == $level_date ) {
+					$transaction_details['payment_type']     = '(Legacy)';
+					$transaction_details['transaction_date'] = $transaction_date;
+
+					break;
+				}
+			}
+		}
+
+		return $transaction_details;
 	}
 
 }

@@ -27,11 +27,11 @@ class Rebate_All_Members extends Rebate_Report {
 	/**
 	 * Set titles for sheet
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
 	 *
 	 * @return \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet
+	 * @since 1.0.3
+	 *
 	 */
 	private function set_titles( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet ) {
 
@@ -76,11 +76,11 @@ class Rebate_All_Members extends Rebate_Report {
 	/**
 	 * Add rows
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
 	 *
 	 * @return \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet
+	 * @since 1.0.3
+	 *
 	 */
 	private function set_rows( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet ) {
 
@@ -146,11 +146,15 @@ class Rebate_All_Members extends Rebate_Report {
 						$activity_type = PMPRO_Chapters_Reports::check_description( $member->membership_level->name, $this->pmpro_orders[ $member->ID ], $this->legacy_orders );
 					}*/
 
+					if ( isset( $_GET['debug'] ) ) {
+						$sheet->setCellValue( 'A' . $row, $member->ID );
+					}
+
 					$sheet->setCellValue( 'C' . $row, $last_name );
 					$sheet->setCellValue( 'D' . $row, $first_name );
 					$sheet->setCellValue( 'E' . $row, $membership_level_name );
 					$sheet->setCellValue( 'F' . $row, $last_two_orders['last']['description'] );
-					$sheet->setCellValue( 'G' . $row, $last_two_orders['last']['payment_type'] );
+					$sheet->setCellValue( 'G' . $row, ucfirst( $last_two_orders['last']['payment_type'] ) );
 					$sheet->setCellValue( 'H' . $row, $start_date );
 					$sheet->setCellValue( 'I' . $row, $start_date );
 					$sheet->setCellValue( 'J' . $row, $last_two_orders['last']['amount'] );
@@ -195,11 +199,11 @@ class Rebate_All_Members extends Rebate_Report {
 	/**
 	 * Apply column modifications
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $sheet
 	 *
 	 * @return mixed
+	 * @since 1.0.3
+	 *
 	 */
 	private function set_modifications( $sheet ) {
 

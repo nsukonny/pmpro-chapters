@@ -38,6 +38,15 @@ class PMPRO_Chapters_Reports {
 	private $pmpro_orders;
 
 	/**
+	 * History of user subscriptions
+	 *
+	 * @var array
+	 *
+	 * @since 1.0.3
+	 */
+	private $pmpro_memberships_users_history;
+
+	/**
 	 * PMPRO_Chapters_Reports initialization class.
 	 *
 	 * @since 1.0.0
@@ -51,9 +60,9 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Chapter export shortcode
 	 *
+	 * @return string
 	 * @since 1.0.0
 	 *
-	 * @return string
 	 */
 	public function add_chapter_export_page() {
 		global $wp;
@@ -99,6 +108,9 @@ class PMPRO_Chapters_Reports {
                 <p>
                     <input type="submit" value="<?php _e( 'Get report', 'pmpro-chapters' ); ?>">
                 </p>
+				<?php if ( isset( $_GET['debug'] ) ) { ?>
+                    <input type="hidden" name="debug" value="1">
+				<?php } ?>
             </form>
 			<?php
 		} else {
@@ -197,9 +209,9 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Get membership level for user
 	 *
+	 * @return string
 	 * @since 1.0.0
 	 *
-	 * @return string
 	 */
 	private function get_membership_level( $user_id ) {
 
@@ -225,9 +237,9 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Get list of membership levels
 	 *
+	 * @return array|object|null
 	 * @since 1.0.0
 	 *
-	 * @return array|object|null
 	 */
 	private function get_membership_levels() {
 		global $wpdb;
@@ -243,22 +255,41 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Get data from last order for that user
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $user_id
 	 *
 	 * @return array
+	 * @since 1.0.0
+	 *
 	 */
 	public function get_last_order_info( $user_id ) {
 		global $wpdb;
 
-		$order         = array(
+		$order          = array(
 			'description' => '',
 			'start_date'  => '',
 			'end_date'    => '',
 			'amount'      => '',
 		);
-		$min_date      = strtotime( '2/2/20' );
+		$min_date       = strtotime( '2/2/20' );
+		$levels_history = $this->get_levels_history( $user_id );
+		if ( 0 < count( $levels_history ) ) {
+			foreach ( $levels_history as $level_history ) {
+				if ( 'active' !== $level_history->status ) {
+					continue;
+				}
+
+				$level = pmpro_getLevel( $level_history->membership_id );
+				$order = array(
+					'description' => $level->name,
+					'start_date'  => $level_history->startdate,
+					'end_date'    => $level_history->enddate,
+					'amount'      => $level_history->billing_amount,
+				);
+
+				return $order;
+			}
+		}
+
 		$pmpro_orders  = $this->get_pmpro_orders( $user_id );
 		$legacy_orders = $this->get_legacy_orders( $user_id );
 
@@ -321,11 +352,11 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Get since date for user
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $user_id
 	 *
 	 * @return false|string
+	 * @since 1.0.0
+	 *
 	 */
 	public static function get_member_since_date( $user_id ) {
 
@@ -349,65 +380,75 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Get end date for membership
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $membership_level
 	 *
 	 * @param $user_id
+	 * @param $last_order_info
 	 *
 	 * @return string
+	 *
+	 * @since 1.0.0
 	 */
-	public static function get_end_date( $membership_level, $user_id ) {
+	private function get_end_date( $membership_level, $user_id, $last_order_info ): string {
 
-		$is_lifetime_member = isset( $membership_level->ID ) && empty( $membership_level->enddate );
-		$is_member          = isset( $membership_level->ID ) && ! empty( $membership_level->enddate );
-		$end_date           = '';
+		$expiration_time = null;
 
-		if ( $is_lifetime_member ) {
-			$end_date = __( '01/01/2100', 'pmpro-chapters' );
-		} else if ( $is_member ) {
-			$end_date = date_i18n( 'm/d/y', $membership_level->enddate );
+		if ( $membership_level && ! empty( $membership_level->enddate ) ) {
+			$expiration_time = $membership_level->enddate;
 		}
 
-		if ( strtotime( '30.06.2020' ) > strtotime( $end_date ) || empty( $end_date ) ) {
-			$member_expiration_date = get_user_meta( $user_id, 'member_expiration_date', true );
-			if ( ! empty( $member_expiration_date ) && strtotime( $member_expiration_date ) > strtotime( '01.01.1980' ) ) {
-				$end_date = date_i18n( 'm/d/y', strtotime( $member_expiration_date ) );
+		if ( null === $expiration_time ) {
+			if ( in_array( $membership_level->ID, array( 1, 4, 5, 6, 7, 8 ) ) ) {
+				$membership_level_years = 1;
+			} else if ( in_array( $membership_level->ID, array( 2, 9, 10, 11, 12, 13 ) ) ) {
+				$membership_level_years = 3;
+			}
+
+			if ( isset( $membership_level_years ) && ! empty( $membership_level->startdate ) ) {
+				$expiration_time = strtotime( '+' . $membership_level_years . ' years', $membership_level->startdate );
 			}
 		}
 
-		if ( strtotime( $end_date ) < strtotime( '01.01.1976' ) ) {
-			$end_date = '';
+		if ( empty( $membership_level ) && strtotime( '01.01.1975' ) > $expiration_time ) {
+			$expiration_time = strtotime( $last_order_info['start_date'] );
 		}
 
-		return $end_date;
-	}
+		if ( null === $expiration_time ) {
 
-	/**
-	 * Get expiration date for previous membership
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param $membership_levels
-	 *
-	 * @return string
-	 */
-	private function get_previous_end_date( $membership_levels ) {
+			$levels_history = $this->get_levels_history( $user_id );
 
-		$end_date = ! isset( $membership_levels[1] ) || empty( $membership_levels[1]->enddate )
-			? '' : date_i18n( 'm/d/y', $membership_levels[1]->enddate );
+			if ( 0 < count( $levels_history ) ) {
+				$last_level = array_pop( $levels_history );
+				if ( strtotime( '01.01.1975' ) < strtotime( $last_level->enddate ) ) {
+					$expiration_time = strtotime( $last_level->enddate );
+				}
+			}
+		}
 
-		return $end_date;
+		if ( null === $expiration_time ) {
+			$member_expiration_date = get_user_meta( $user_id, 'member_expiration_date', true );
+			if ( ! empty( $member_expiration_date ) && strtotime( '01.01.1975' ) < strtotime( $member_expiration_date ) ) {
+				$expiration_time = strtotime( $member_expiration_date );
+			}
+		}
+
+		if ( null === $expiration_time ) {
+			$expiration_time = strtotime( '01.01.2100' );
+		}
+
+		return date_i18n( 'm/d/Y', $expiration_time );
 	}
 
 	/**
 	 * Get user PMPRO orders history
 	 *
-	 * @since 1.0.0
+	 * @param $user_id
 	 *
 	 * @return array
+	 *
+	 * @since 1.0.0
 	 */
-	private function get_pmpro_orders( $user_id ) {
+	private function get_pmpro_orders( $user_id ): array {
 
 		if ( ! $this->pmpro_orders ) {
 			global $wpdb;
@@ -434,11 +475,11 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Get user Legacy orders history
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $user_id
 	 *
 	 * @return array
+	 * @since 1.0.0
+	 *
 	 */
 	private function get_legacy_orders( $user_id ) {
 
@@ -464,9 +505,10 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Set columns size by content
 	 *
+	 * @param $sheet
+	 *
 	 * @since 1.0.0
 	 *
-	 * @param $sheet
 	 */
 	private function set_autosize( &$sheet ) {
 
@@ -512,11 +554,11 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Prepare status for xls
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $user_id int
 	 *
 	 * @return string
+	 * @since 1.0.0
+	 *
 	 */
 	private function get_status( $user_id ) {
 
@@ -528,9 +570,10 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Set titles for all columns
 	 *
+	 * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
+	 *
 	 * @since 1.0.0
 	 *
-	 * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
 	 */
 	private function set_titles( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet &$sheet, &$row ) {
 
@@ -567,11 +610,11 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Add users to xls file
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
 	 *
 	 * @throws \PhpOffice\PhpSpreadsheet\Exception
+	 * @since 1.0.0
+	 *
 	 */
 	private function set_users( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet &$sheet, $chapter_id, &$row ) {
 
@@ -635,9 +678,7 @@ class PMPRO_Chapters_Reports {
 					$user_info['amount'] = 0 < $last_order_info['amount'] ? $last_order_info['amount']
 						: $this->get_billed_amount( $membership_level );
 
-					$user_info['end_date'] = ( ! empty( $last_order_info['end_date'] ) )
-						? date_i18n( 'm/d/y', strtotime( $last_order_info['end_date'] ) )
-						: self::get_end_date( $membership_level, $user->ID );
+					$user_info['end_date'] = $this->get_end_date( $membership_level, $user->ID, $last_order_info );
 
 					if ( empty( $user_info['end_date'] ) ) {
 						$user_info['end_date_day'] = $user_info['end_date_year'] = '';
@@ -673,15 +714,18 @@ class PMPRO_Chapters_Reports {
 				array_push( $users_array, $user_info );
 			}
 
-			// sorting part
 			$users_array1 = $this->array_msort( $users_array, array(
 				'status'        => SORT_ASC,
 				'end_date_year' => SORT_DESC,
 				'end_date_day'  => SORT_DESC,
 				'last_name'     => SORT_ASC
 			) );
-			//
+
 			foreach ( $users_array1 as $user ) {
+				if ( isset( $_GET['debug'] ) ) {
+					$sheet->setCellValue( 'A' . $row, $user['user_id'] );
+				}
+
 				$sheet->setCellValue( 'B' . $row, $user['last_name'] );
 				$sheet->setCellValue( 'C' . $row, $user['first_name'] );
 				$sheet->setCellValue( 'D' . $row, $user['membership'] );
@@ -739,12 +783,12 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Multisort results
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $array
 	 * @param $cols
 	 *
 	 * @return array
+	 * @since 1.0.0
+	 *
 	 */
 	private function array_msort( $array, $cols ) {
 
@@ -782,12 +826,12 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Set title for xls document
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
 	 * @param $chapter
 	 *
 	 * @throws \PhpOffice\PhpSpreadsheet\Exception
+	 * @since 1.0.0
+	 *
 	 */
 	private function set_chapter_name( \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet &$sheet, $chapter, &$row ) {
 
@@ -804,11 +848,11 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Return total billed summ for that level
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $membership_level
 	 *
 	 * @return string
+	 * @since 1.0.0
+	 *
 	 */
 	private function get_billed_amount( $membership_level ) {
 
@@ -833,12 +877,12 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Remove wrong dates like 1970
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $member_since_date
 	 * @param $user_id
 	 *
 	 * @return string
+	 * @since 1.0.0
+	 *
 	 */
 	public static function remove_wrong_since_dates( $member_since_date, $user_id ) {
 
@@ -854,14 +898,14 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Add for this type word "Renewal" or "Join"
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $activity_type
 	 *
 	 * @param $pmpro_orders
 	 * @param $legacy_orders
 	 *
 	 * @return string
+	 * @since 1.0.0
+	 *
 	 */
 	public static function check_description( $activity_type, $pmpro_orders, array $legacy_orders = array() ) {
 
@@ -895,11 +939,11 @@ class PMPRO_Chapters_Reports {
 	/**
 	 * Remove from text words like Renewal and Join
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $description
 	 *
 	 * @return string
+	 * @since 1.0.3
+	 *
 	 */
 	public static function clear_description( $description ) {
 
@@ -909,6 +953,43 @@ class PMPRO_Chapters_Reports {
 		}
 
 		return $description;
+	}
+
+	/**
+	 * Get levels history for user
+	 *
+	 * @param $user_id
+	 *
+	 * @return array
+	 *
+	 * @since 1.0.3
+	 */
+	private function get_levels_history( $user_id ): array {
+
+		if ( ! $this->pmpro_memberships_users_history ) {
+
+			$this->pmpro_memberships_users_history = get_transient( 'pmpro_levels_history' );
+
+			if ( isset( $_GET['debug'] ) ) {
+				$this->pmpro_memberships_users_history = false;
+			}
+
+			if ( false === $this->pmpro_memberships_users_history ) {
+				global $wpdb;
+
+				$this->pmpro_memberships_users_history = $wpdb->get_results( "SELECT * FROM $wpdb->pmpro_memberships_users WHERE user_id != '0' ORDER BY id DESC" );
+			}
+		}
+
+		$levels_history = array();
+
+		foreach ( $this->pmpro_memberships_users_history as $user_history ) {
+			if ( $user_id == $user_history->user_id && 'active' == $user_history->status ) {
+				$levels_history[] = $user_history;
+			}
+		}
+
+		return $levels_history;
 	}
 
 }

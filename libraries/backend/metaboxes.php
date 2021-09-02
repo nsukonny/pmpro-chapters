@@ -42,10 +42,11 @@ class PMPRO_Chapters_Metaboxes {
 	/**
 	 * Body of metabox with chapter parameters
 	 *
-	 * @since 1.0.0
-	 *
 	 * @param $post
 	 * @param $meta
+	 *
+	 * @since 1.0.0
+	 *
 	 */
 	public function chapter_coutry_metabox( $post, $meta ) {
 
@@ -291,9 +292,10 @@ class PMPRO_Chapters_Metaboxes {
 	/**
 	 * Save all metaboxes data
 	 *
+	 * @param $post_id
+	 *
 	 * @since 1.0.0
 	 *
-	 * @param $post_id
 	 */
 	public function save_metaboxes( $post_id ) {
 
@@ -322,9 +324,8 @@ class PMPRO_Chapters_Metaboxes {
 			update_post_meta( $post_id, 'chapter_state', sanitize_text_field( $_POST['chapter_state'] ) );
 		}
 
-		if ( isset( $_POST['chapter_closed'] ) ) {
-			update_post_meta( $post_id, 'chapter_closed', 'yes' == $_POST['chapter_closed'] ? 'yes' : 'no' );
-		}
+		$chapter_closed = ( isset( $_POST['chapter_closed'] ) && 'yes' == $_POST['chapter_closed'] ) ? 'yes' : 'no';
+		update_post_meta( $post_id, 'chapter_closed', $chapter_closed );
 
 		if ( isset( $_POST['chapter_social'] ) && 0 < count( $_POST['chapter_social'] ) ) {
 			$chapter_social = array();

@@ -56,6 +56,15 @@ class PMPRO_Rebate_Reports {
 	private $membership_levels;
 
 	/**
+	 * History of user subscriptions
+	 *
+	 * @var array
+	 *
+	 * @since 1.0.3
+	 */
+	private $pmpro_memberships_users_history;
+
+	/**
 	 * PMPRO_Rebate_Reports initialization class.
 	 *
 	 * @since 1.0.3
@@ -69,9 +78,9 @@ class PMPRO_Rebate_Reports {
 	/**
 	 * Chapter rebate reports shortcode
 	 *
+	 * @return string
 	 * @since 1.0.3
 	 *
-	 * @return string
 	 */
 	public function add_rebate_reports() {
 
@@ -128,14 +137,13 @@ class PMPRO_Rebate_Reports {
 
 		$spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
-		ini_set( 'max_execution_time', '300' );
+		ini_set( 'max_execution_time', '500' );
 		$sheet_summary_page = new Rebate_Summary( $spreadsheet, $this->get_chapters(), $this->get_members(), $this->get_pmpro_orders(), $this->get_legacy_orders() );
 		$spreadsheet        = $sheet_summary_page->make_sheet();
 
 		$sheet_all_members = new Rebate_All_Members( $spreadsheet, $this->get_chapters(), $this->get_members(), $this->get_pmpro_orders(), $this->get_legacy_orders() );
 		$sheet_all_members->set_membership_levels( $this->get_membership_levels() );
 		$spreadsheet = $sheet_all_members->make_sheet();
-
 		foreach ( $this->chapters as $chapter_key => $chapter ) {
 			$chapter_sheet = new Rebate_All_Members( $spreadsheet, $this->get_chapters(), $this->get_members(), $this->get_pmpro_orders(), $this->get_legacy_orders() );
 			$chapter_sheet->set_membership_levels( $this->get_membership_levels() );
@@ -167,9 +175,9 @@ class PMPRO_Rebate_Reports {
 	/**
 	 * Get chapters list
 	 *
+	 * @return WP_Post[]
 	 * @since 1.0.3
 	 *
-	 * @return WP_Post[]
 	 */
 	private function get_chapters() {
 
@@ -219,16 +227,18 @@ class PMPRO_Rebate_Reports {
 	/**
 	 * Get members grouped by chapter ID
 	 *
-	 * @since 1.0.3
+	 * @return array Array of Chapters with members lists
 	 *
-	 * @return WP_User[]
+	 * @since 1.0.3
 	 */
 	private function get_members() {
 
 		if ( ! $this->members ) {
 
 			$this->members = get_transient( 'pmpro_members_list' );
-
+			if ( isset( $_GET['debug'] ) ) {
+				$this->members = false;
+			}
 			if ( false === $this->members ) {
 
 				$args = array(
@@ -257,11 +267,6 @@ class PMPRO_Rebate_Reports {
 							$this->members[ $chapter_id ] = array();
 						}
 
-						/*
-						if ( false === $user_membership_level_name ) {
-							continue;
-						}*/
-
 						$user->data->membership_level_name = '';
 						$user->data->membership_level      = null;
 						if ( function_exists( 'pmpro_getMembershipLevelForUser' ) ) {
@@ -269,35 +274,23 @@ class PMPRO_Rebate_Reports {
 							$user->data->membership_level_name = $this->get_membership_level( $user->data->membership_level );
 						}
 
-						// Skip member if he have expiration at before needed period.
-						$user->data->member_expiration_time = null;
-						if ( $user->data->membership_level && ! empty( $user->data->membership_level->enddate ) ) {
-							$user->data->member_expiration_time = $user->data->membership_level->enddate;
-						} else {
-							$member_expiration_date = get_user_meta( $user->ID, 'member_expiration_date', true );
-							if ( ! empty( $member_expiration_date ) ) {
-								$user->data->member_expiration_time = strtotime( $member_expiration_date );
-							}
-						}
+						$member_end_time                    = $this->get_member_expiration_time( $user );
+						$user->data->member_expiration_time = $member_end_time;
 
 						$member_start_date    = get_user_meta( $user->ID, 'member_member_since_date', true );
-						$expired_before_range = ! is_numeric( $user->data->member_expiration_time )
-						                        || ( $user->data->member_expiration_time < strtotime( $_REQUEST['from'] . ' 00:00:00' ) );
+						$expired_before_range = ! is_numeric( $member_end_time )
+						                        || ( $member_end_time < strtotime( $_REQUEST['from'] . ' 00:00:00' ) );
 						$started_after_range  = $member_start_date && strtotime( $member_start_date ) >= strtotime( $_REQUEST['to'] . ' 23:59:59' );
 
 						if ( $expired_before_range || $started_after_range ) {
 							continue;
 						}
 
-						/*if ( null !== $user->data->membership_level
-							 && isset( $user->data->membership_level->name ) ) {
-							$this->members[ $chapter_id ][] = $user;
-						}*/
 						$this->members[ $chapter_id ][] = $user;
 					}
 				}
 
-				set_transient( 'pmpro_members_list', $this->members, 12 * HOUR_IN_SECONDS );
+				set_transient( 'pmpro_members_list', $this->members, 5 * HOUR_IN_SECONDS );
 			}
 		}
 
@@ -307,9 +300,9 @@ class PMPRO_Rebate_Reports {
 	/**
 	 * Get user PMPRO orders history
 	 *
+	 * @return array
 	 * @since 1.0.3
 	 *
-	 * @return array
 	 */
 	private function get_pmpro_orders() {
 
@@ -352,9 +345,9 @@ class PMPRO_Rebate_Reports {
 	/**
 	 * Get user Legacy orders history
 	 *
+	 * @return array
 	 * @since 1.0.3
 	 *
-	 * @return array
 	 */
 	private function get_legacy_orders() {
 
@@ -385,11 +378,11 @@ class PMPRO_Rebate_Reports {
 	/**
 	 * Get membership level for user
 	 *
-	 * @since 1.0.3
-	 *
 	 * @param $membership_level
 	 *
 	 * @return string
+	 * @since 1.0.3
+	 *
 	 */
 	private function get_membership_level( $membership_level ) {
 
@@ -410,9 +403,9 @@ class PMPRO_Rebate_Reports {
 	/**
 	 * Get list of membership levels
 	 *
+	 * @return array|object|null
 	 * @since 1.0.3
 	 *
-	 * @return array|object|null
 	 */
 	private function get_membership_levels() {
 		global $wpdb;
@@ -423,6 +416,95 @@ class PMPRO_Rebate_Reports {
 		}
 
 		return $this->membership_levels;
+	}
+
+	/**
+	 * Get Member expiration time
+	 *
+	 * @param $user
+	 *
+	 * @return int
+	 *
+	 * @since 1.0.4
+	 */
+	private function get_member_expiration_time( $user ): int {
+
+		$expiration_time = null;
+
+		if ( $user->data->membership_level && ! empty( $user->data->membership_level->enddate ) ) {
+			$expiration_time = $user->data->membership_level->enddate;
+		}
+
+		if ( null === $expiration_time ) {
+			$member_expiration_date = get_user_meta( $user->ID, 'member_expiration_date', true );
+			if ( ! empty( $member_expiration_date ) ) {
+				$expiration_time = strtotime( $member_expiration_date );
+			}
+		}
+
+		if ( null === $expiration_time ) {
+			if ( in_array( $user->data->membership_level->ID, array( 1, 4, 5, 6, 7, 8 ) ) ) {
+				$membership_level_years = 1;
+			} else if ( in_array( $user->data->membership_level->ID, array( 2, 9, 10, 11, 12, 13 ) ) ) {
+				$membership_level_years = 3;
+			}
+
+			if ( isset( $membership_level_years ) && ! empty( $user->data->membership_level->startdate ) ) {
+				$expiration_time = strtotime( '+' . $membership_level_years . ' years', $user->data->membership_level->startdate );
+			}
+		}
+
+		if ( null === $expiration_time ) {
+
+			$levels_history = $this->get_levels_history( $user->ID );
+
+			if ( 0 < count( $levels_history ) ) {
+				$last_level      = array_pop( $levels_history );
+				$expiration_time = strtotime( $last_level->enddate );
+			}
+		}
+
+		if ( null === $expiration_time ) {
+			$expiration_time = strtotime( '01.01.2100' );
+		}
+
+		return $expiration_time;
+	}
+
+	/**
+	 * Get levels history for user
+	 *
+	 * @param $user_id
+	 *
+	 * @return array
+	 *
+	 * @since 1.0.3
+	 */
+	public function get_levels_history( $user_id ): array {
+
+		if ( ! $this->pmpro_memberships_users_history ) {
+
+			$this->pmpro_memberships_users_history = get_transient( 'pmpro_levels_history' );
+			if ( isset( $_GET['debug'] ) ) {
+				$this->pmpro_memberships_users_history = false;
+			}
+
+			if ( false === $this->pmpro_memberships_users_history ) {
+				global $wpdb;
+
+				$this->pmpro_memberships_users_history = $wpdb->get_results( "SELECT * FROM $wpdb->pmpro_memberships_users WHERE user_id != '0' ORDER BY id DESC" );
+			}
+		}
+
+		$levels_history = array();
+
+		foreach ( $this->pmpro_memberships_users_history as $user_history ) {
+			if ( $user_id == $user_history->user_id ) {
+				$levels_history[] = $user_history;
+			}
+		}
+
+		return $levels_history;
 	}
 
 }
