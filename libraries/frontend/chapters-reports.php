@@ -283,7 +283,7 @@ class PMPRO_Chapters_Reports {
 					'description' => $level->name,
 					'start_date'  => $level_history->startdate,
 					'end_date'    => $level_history->enddate,
-					'amount'      => $level_history->billing_amount,
+					'amount'      => $level->billing_amount,
 				);
 
 				return $order;
@@ -422,13 +422,6 @@ class PMPRO_Chapters_Reports {
 				if ( strtotime( '01.01.1975' ) < strtotime( $last_level->enddate ) ) {
 					$expiration_time = strtotime( $last_level->enddate );
 				}
-			}
-		}
-
-		if ( null === $expiration_time ) {
-			$member_expiration_date = get_user_meta( $user_id, 'member_expiration_date', true );
-			if ( ! empty( $member_expiration_date ) && strtotime( '01.01.1975' ) < strtotime( $member_expiration_date ) ) {
-				$expiration_time = strtotime( $member_expiration_date );
 			}
 		}
 
@@ -691,6 +684,7 @@ class PMPRO_Chapters_Reports {
 					$user_info['since'] = self::get_member_since_date( $user->ID );
 
 				}
+
 				$user_info['street']   = get_user_meta( $user->ID, 'member_addr_street_1', true );
 				$user_info['city']     = get_user_meta( $user->ID, 'member_addr_city', true );
 				$user_info['state']    = get_user_meta( $user->ID, 'member_addr_state', true );

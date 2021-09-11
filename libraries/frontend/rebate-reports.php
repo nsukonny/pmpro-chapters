@@ -436,13 +436,6 @@ class PMPRO_Rebate_Reports {
 		}
 
 		if ( null === $expiration_time ) {
-			$member_expiration_date = get_user_meta( $user->ID, 'member_expiration_date', true );
-			if ( ! empty( $member_expiration_date ) ) {
-				$expiration_time = strtotime( $member_expiration_date );
-			}
-		}
-
-		if ( null === $expiration_time ) {
 			if ( in_array( $user->data->membership_level->ID, array( 1, 4, 5, 6, 7, 8 ) ) ) {
 				$membership_level_years = 1;
 			} else if ( in_array( $user->data->membership_level->ID, array( 2, 9, 10, 11, 12, 13 ) ) ) {
@@ -455,12 +448,20 @@ class PMPRO_Rebate_Reports {
 		}
 
 		if ( null === $expiration_time ) {
-
 			$levels_history = $this->get_levels_history( $user->ID );
 
 			if ( 0 < count( $levels_history ) ) {
-				$last_level      = array_pop( $levels_history );
-				$expiration_time = strtotime( $last_level->enddate );
+				$last_level = $this->get_actual_level( $levels_history );
+				if ( $last_level ) {
+					$expiration_time = strtotime( $last_level->enddate );
+				}
+			}
+		}
+
+		if ( null === $expiration_time ) {
+			$member_expiration_date = get_user_meta( $user->ID, 'member_expiration_date', true );
+			if ( ! empty( $member_expiration_date ) ) {
+				$expiration_time = strtotime( $member_expiration_date );
 			}
 		}
 
@@ -505,6 +506,29 @@ class PMPRO_Rebate_Reports {
 		}
 
 		return $levels_history;
+	}
+
+	/**
+	 * Get actual active level
+	 *
+	 * @param array $levels_history
+	 *
+	 * @return null
+	 *
+	 * @since 1.0.3
+	 */
+	private function get_actual_level( array $levels_history ) {
+
+		$level = null;
+
+		foreach ( $levels_history as $level_history ) {
+			if ( ( null === $level || strtotime( $level->startdate ) < strtotime( $level_history->startdate ) )
+			     && 'active' === $level_history->status ) {
+				$level = $level_history;
+			}
+		}
+
+		return $level;
 	}
 
 }
