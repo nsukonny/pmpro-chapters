@@ -393,10 +393,6 @@ class PMPRO_Chapters_Reports {
 
 		$expiration_time = null;
 
-		if ( $membership_level && ! empty( $membership_level->enddate ) ) {
-			$expiration_time = $membership_level->enddate;
-		}
-
 		if ( null === $expiration_time ) {
 			if ( in_array( $membership_level->ID, array( 1, 4, 5, 6, 7, 8 ) ) ) {
 				$membership_level_years = 1;
@@ -404,9 +400,20 @@ class PMPRO_Chapters_Reports {
 				$membership_level_years = 3;
 			}
 
-			if ( isset( $membership_level_years ) && ! empty( $membership_level->startdate ) ) {
-				$expiration_time = strtotime( '+' . $membership_level_years . ' years', $membership_level->startdate );
+			$start_date                         = $membership_level->startdate;
+			$last_success_transaction_timestamp = $this->get_last_transaction_timestamp( $user_id );
+			if ( null !== $last_success_transaction_timestamp && $last_success_transaction_timestamp > $start_date ) {
+				$start_date = $last_success_transaction_timestamp;
+
 			}
+
+			if ( isset( $membership_level_years ) && ! empty( $start_date ) ) {
+				$expiration_time = strtotime( '+' . $membership_level_years . ' years', $start_date );
+			}
+		}
+
+		if ( null === $expiration_time && $membership_level && ! empty( $membership_level->enddate ) ) {
+			$expiration_time = $membership_level->enddate;
 		}
 
 		if ( empty( $membership_level ) && strtotime( '01.01.1975' ) > $expiration_time ) {
@@ -456,6 +463,7 @@ class PMPRO_Chapters_Reports {
 				if ( function_exists( 'pmpro_getLevel' ) ) {
 					$level                                         = (array) pmpro_getLevel( $pmpro_order->membership_id );
 					$level['timestamp']                            = $pmpro_order->timestamp;
+					$level['order_details']                        = $pmpro_order;
 					$this->pmpro_orders[ $pmpro_order->user_id ][] = (object) $level;
 				}
 
@@ -984,6 +992,35 @@ class PMPRO_Chapters_Reports {
 		}
 
 		return $levels_history;
+	}
+
+	/**
+	 * Check transactions and get last success timestamp
+	 *
+	 * @param $user_id
+	 *
+	 * @return int|null
+	 *
+	 * @since 1.0.3
+	 */
+	private function get_last_transaction_timestamp( $user_id ): ?int {
+
+		$timestamp = null;
+
+		$pmpro_orders = $this->get_pmpro_orders( $user_id );
+		if ( $pmpro_orders ) {
+			foreach ( $pmpro_orders as $pmpro_order ) {
+				if ( 'success' === $pmpro_order->order_details->status ) {
+
+					$order_timestamp = strtotime( $pmpro_order->order_details->timestamp );
+					if ( $order_timestamp > $timestamp ) {
+						$timestamp = $order_timestamp;
+					}
+				}
+			}
+		}
+
+		return $timestamp;
 	}
 
 }
