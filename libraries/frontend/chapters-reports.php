@@ -660,10 +660,9 @@ class PMPRO_Chapters_Reports {
 				}
 				$user_info['membership'] = $temp_membership;
 
-				$last_order_info         = $this->get_last_order_info( $user->ID );
-				$user_info['activity']   = $last_order_info['description'];
-				$user_info['start_date'] = $last_order_info['start_date'];
-
+				$last_order_info              = $this->get_last_order_info( $user->ID );
+				$user_info['activity']        = $last_order_info['description'];
+				$user_info['start_timestamp'] = $this->get_member_start_timestamp( $user, $last_order_info );
 
 				if ( empty( $user_info['activity'] ) ) {
 					continue;
@@ -732,9 +731,9 @@ class PMPRO_Chapters_Reports {
 				$sheet->setCellValue( 'C' . $row, $user['first_name'] );
 				$sheet->setCellValue( 'D' . $row, $user['membership'] );
 
-				if ( ! empty( $user['start_date'] ) ) {
+				if ( ! empty( $user['start_timestamp'] ) ) {
 					$start_date = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(
-						strtotime( $user['start_date'] ) );
+						$user['start_timestamp'] );
 					$sheet->setCellValue( 'F' . $row, $start_date );
 				}
 
@@ -1021,6 +1020,28 @@ class PMPRO_Chapters_Reports {
 		}
 
 		return $timestamp;
+	}
+
+	/**
+	 * Get start date from last transaction or from last order
+	 *
+	 * @param $user
+	 * @param array $last_order_info
+	 *
+	 * @return int
+	 *
+	 * @since 1.0.3
+	 */
+	private function get_member_start_timestamp( $user, array $last_order_info ): int {
+
+		$start_timestamp = strtotime( $last_order_info['start_date'] );
+
+		$last_transaction_timestamp = $this->get_last_transaction_timestamp( $user->ID );
+		if ( null !== $last_transaction_timestamp ) {
+			$start_timestamp = $last_transaction_timestamp;
+		}
+
+		return $start_timestamp;
 	}
 
 }
